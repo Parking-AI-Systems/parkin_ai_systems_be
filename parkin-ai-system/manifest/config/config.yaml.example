@@ -37,3 +37,8 @@ database:
     maxIdle: "10"
     maxOpen: "10"
     maxLifetime: "60s"
+
+auth:
+  secretKey: +hd>PywO8jrAnIewJvK7UbU1;*28m
+  accessTokenExpireMinute: 60
+  refreshTokenExpireMinute: 1440
