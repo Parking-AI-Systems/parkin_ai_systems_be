@@ -2,7 +2,7 @@
 gfcli:
   gen:
     dao:
-      - link: "jdbc:postgresql://ep-bitter-dust-a1n27idx-pooler.ap-southeast-1.aws.neon.tech:5432/neondb?sslmode=require&channelBinding=require"
+      - link: "pgsql:neondb_owner:npg_BNZpL67rcRiw@tcp(ep-bitter-dust-a1n27idx-pooler.ap-southeast-1.aws.neon.tech:5432)/neondb?sslmode=require&channelBinding=require"
         tables: "users,wallet_transactions,parking_lots,parking_slots,parking_orders,vehicles,parking_lot_reviews,parking_lot_images,others_service,others_service_orders,notifications,api_tokens,favorites"
         removePrefix: "gf_"
         descriptionTag: true
