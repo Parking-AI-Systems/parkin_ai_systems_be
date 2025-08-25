@@ -238,6 +238,26 @@ func (s *sUser) UserProfile(ctx context.Context, req *user.UserProfileReq) (res 
 	return
 }
 
+func (s *sUser) UserById(ctx context.Context, req *user.UserByIdReq) (res *user.UserByIdRes, err error) {
+	userRecord, err := dao.Users.Ctx(ctx).Where("id", req.Id).One()
+	if err != nil {
+		return nil, gerror.New("Database error")
+	}
+	if userRecord.IsEmpty() {
+		return nil, gerror.New("User not found")
+	}
+	res = &user.UserByIdRes{
+		UserID:    userRecord["id"].Int64(),
+		Username:  userRecord["username"].String(),
+		Email:     userRecord["email"].String(),
+		Phone:     userRecord["phone"].String(),
+		FullName:  userRecord["full_name"].String(),
+		Gender:    userRecord["gender"].String(),
+		BirthDate: userRecord["birth_date"].String(),
+	}
+	return
+}
+
 func (s *sUser) UserUpdateProfile(ctx context.Context, req *user.UserUpdateProfileReq) (res *user.UserUpdateProfileRes, err error) {
 	userIDStr := ""
 	if v := g.RequestFromCtx(ctx).GetCtxVar("user_id"); v != nil {

@@ -17,4 +17,5 @@ type IUserUser interface {
 	UserProfile(ctx context.Context, req *user.UserProfileReq) (res *user.UserProfileRes, err error)
 	Register(ctx context.Context, req *user.RegisterReq) (res *user.RegisterRes, err error)
 	UserUpdateProfile(ctx context.Context, req *user.UserUpdateProfileReq) (res *user.UserUpdateProfileRes, err error)
+	UserById(ctx context.Context, req *user.UserByIdReq) (res *user.UserByIdRes, err error)
 }

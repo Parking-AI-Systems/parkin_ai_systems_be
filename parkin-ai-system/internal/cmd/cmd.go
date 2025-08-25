@@ -46,6 +46,8 @@ var (
 					authGroup.POST("/user/logout", userCtrl.UserLogout)
 					authGroup.GET("/user/profile", userCtrl.UserProfile)
 				})
+
+				group.GET("/users/:id", userCtrl.UserById)
 			})
 			s.Run()
 			return nil
