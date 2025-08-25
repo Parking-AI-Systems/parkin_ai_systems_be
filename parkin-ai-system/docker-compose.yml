@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  # GoFrame Backend Application
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: parkin-ai-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./log:/app/log
+      - ./manifest/config:/app/manifest/config
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
