@@ -18,6 +18,7 @@ type (
 		Logout(ctx context.Context, req *user.UserLogoutReq) (res *user.UserLogoutRes, err error)
 		HashPassword(password string) (string, error)
 		UserProfile(ctx context.Context, req *user.UserProfileReq) (res *user.UserProfileRes, err error)
+		UserUpdateProfile(ctx context.Context, req *user.UserUpdateProfileReq) (res *user.UserUpdateProfileRes, err error)
 	}
 )
 

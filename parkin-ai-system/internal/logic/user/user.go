@@ -210,7 +210,6 @@ func (s *sUser) HashPassword(password string) (string, error) {
 }
 
 func (s *sUser) UserProfile(ctx context.Context, req *user.UserProfileReq) (res *user.UserProfileRes, err error) {
-	// Extract user ID from context (middleware sets this)
 	userIDStr := ""
 	if v := g.RequestFromCtx(ctx).GetCtxVar("user_id"); v != nil {
 		userIDStr = v.String()
@@ -219,7 +218,6 @@ func (s *sUser) UserProfile(ctx context.Context, req *user.UserProfileReq) (res 
 		return nil, gerror.New("Unauthorized: user_id missing in context")
 	}
 
-	// Query user info from DB
 	userRecord, err := dao.Users.Ctx(ctx).Where("id", userIDStr).One()
 	if err != nil {
 		return nil, gerror.New("Database error")
@@ -236,6 +234,32 @@ func (s *sUser) UserProfile(ctx context.Context, req *user.UserProfileReq) (res 
 		FullName:  userRecord["full_name"].String(),
 		Gender:    userRecord["gender"].String(),
 		BirthDate: userRecord["birth_date"].String(),
+	}
+	return
+}
+
+func (s *sUser) UserUpdateProfile(ctx context.Context, req *user.UserUpdateProfileReq) (res *user.UserUpdateProfileRes, err error) {
+	userIDStr := ""
+	if v := g.RequestFromCtx(ctx).GetCtxVar("user_id"); v != nil {
+		userIDStr = v.String()
+	}
+	if userIDStr == "" {
+		return nil, gerror.New("Unauthorized: user_id missing in context")
+	}
+
+	_, err = dao.Users.Ctx(ctx).Where("id", userIDStr).Data(g.Map{
+		"full_name":  req.FullName,
+		"phone":      req.Phone,
+		"gender":     req.Gender,
+		"birth_date": req.BirthDate,
+	}).Update()
+	if err != nil {
+		return nil, gerror.New("Failed to update user profile")
+	}
+
+	res = &user.UserUpdateProfileRes{
+		Success: true,
+		Message: "Profile updated successfully",
 	}
 	return
 }
