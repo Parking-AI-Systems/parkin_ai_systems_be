@@ -10,8 +10,8 @@ import (
 	"parkin-ai-system/internal/service"
 )
 
-func (c *ControllerUser) UserLogout(ctx context.Context, req *user.UserLogoutReq) (res *user.UserLogoutRes, err error) {
-	res, err = service.User().Logout(ctx, req)
+func (c *ControllerUser) RefreshToken(ctx context.Context, req *user.RefreshTokenReq) (res *user.RefreshTokenRes, err error) {
+	res, err = service.User().RefreshToken(ctx, req)
 	if err != nil {
 		return nil, gerror.NewCode(gcode.CodeInternalError, err.Error())
 	}

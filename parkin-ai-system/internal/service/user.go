@@ -14,7 +14,9 @@ type (
 	IUser interface {
 		SignUp(ctx context.Context, req *user.RegisterReq) (res *user.RegisterRes, err error)
 		Login(ctx context.Context, req *user.UserLoginReq) (res *user.UserLoginRes, err error)
+		RefreshToken(ctx context.Context, req *user.RefreshTokenReq) (res *user.RefreshTokenRes, err error)
 		Logout(ctx context.Context, req *user.UserLogoutReq) (res *user.UserLogoutRes, err error)
+		HashPassword(password string) (string, error)
 	}
 )
 

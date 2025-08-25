@@ -4,6 +4,7 @@ import (
 	"context"
 	"parkin-ai-system/internal/config"
 	"parkin-ai-system/internal/controller/user"
+	"parkin-ai-system/internal/middleware"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -28,9 +29,23 @@ var (
 
 			s.Logger().SetHandlers(glog.HandlerJson)
 
+			// Register global middlewares
+			s.Use(middleware.CORS, ghttp.MiddlewareHandlerResponse)
+
 			s.Group("/backend/parkin/v1", func(group *ghttp.RouterGroup) {
 				group.Middleware(ghttp.MiddlewareHandlerResponse)
+
+				// Public routes (no auth required)
 				group.POST("/user/register", userCtrl.Register)
+				group.POST("/user/login", userCtrl.UserLogin)
+				group.POST("/user/refresh", userCtrl.RefreshToken)
+
+				// Protected routes (auth required)
+				group.Group("/", func(authGroup *ghttp.RouterGroup) {
+					authGroup.Middleware(middleware.Auth)
+					authGroup.POST("/user/logout", userCtrl.UserLogout)
+					// Add other protected routes here
+				})
 			})
 			s.Run()
 			return nil
