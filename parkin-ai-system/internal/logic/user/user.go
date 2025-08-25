@@ -208,3 +208,34 @@ func (s *sUser) HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	return string(bytes), err
 }
+
+func (s *sUser) UserProfile(ctx context.Context, req *user.UserProfileReq) (res *user.UserProfileRes, err error) {
+	// Extract user ID from context (middleware sets this)
+	userIDStr := ""
+	if v := g.RequestFromCtx(ctx).GetCtxVar("user_id"); v != nil {
+		userIDStr = v.String()
+	}
+	if userIDStr == "" {
+		return nil, gerror.New("Unauthorized: user_id missing in context")
+	}
+
+	// Query user info from DB
+	userRecord, err := dao.Users.Ctx(ctx).Where("id", userIDStr).One()
+	if err != nil {
+		return nil, gerror.New("Database error")
+	}
+	if userRecord.IsEmpty() {
+		return nil, gerror.New("User not found")
+	}
+
+	res = &user.UserProfileRes{
+		UserID:    userRecord["id"].Int64(),
+		Username:  userRecord["username"].String(),
+		Email:     userRecord["email"].String(),
+		Phone:     userRecord["phone"].String(),
+		FullName:  userRecord["full_name"].String(),
+		Gender:    userRecord["gender"].String(),
+		BirthDate: userRecord["birth_date"].String(),
+	}
+	return
+}

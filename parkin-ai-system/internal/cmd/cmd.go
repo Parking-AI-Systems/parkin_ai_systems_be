@@ -44,7 +44,7 @@ var (
 				group.Group("/", func(authGroup *ghttp.RouterGroup) {
 					authGroup.Middleware(middleware.Auth)
 					authGroup.POST("/user/logout", userCtrl.UserLogout)
-					// Add other protected routes here
+					authGroup.GET("/user/profile", userCtrl.UserProfile)
 				})
 			})
 			s.Run()
