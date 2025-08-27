@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"parkin-ai-system/internal/config"
+	"parkin-ai-system/internal/controller/parking_lot"
 	"parkin-ai-system/internal/controller/user"
 	"parkin-ai-system/internal/controller/vehicle"
 	"parkin-ai-system/internal/middleware"
@@ -26,6 +27,7 @@ var (
 
 			userCtrl := user.NewUser()
 			vehicleCtrl := vehicle.NewVehicle()
+			parkingLotCtrl := parking_lot.NewParkingLot()
 
 			s := g.Server()
 
@@ -39,6 +41,7 @@ var (
 				group.POST("/user/register", userCtrl.Register)
 				group.POST("/user/login", userCtrl.UserLogin)
 				group.POST("/user/refresh", userCtrl.RefreshToken)
+				group.GET("/parking-lots/{id}", parkingLotCtrl.ParkingLotDetail)
 				//user
 				group.Group("/", func(authGroup *ghttp.RouterGroup) {
 					authGroup.Middleware(middleware.Auth)
@@ -48,6 +51,7 @@ var (
 					authGroup.GET("/vehicles", vehicleCtrl.VehicleList)
 					authGroup.GET("/vehicles/{id}", vehicleCtrl.VehicleDetail)
 					authGroup.PATCH("/vehicles/{id}", vehicleCtrl.VehicleUpdate)
+					authGroup.POST("/parking-lots", parkingLotCtrl.ParkingLotAdd)
 				})
 
 				group.Group("/", func(userGroup *ghttp.RouterGroup) {
