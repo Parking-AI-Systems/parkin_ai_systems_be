@@ -4,6 +4,7 @@ import (
 	"context"
 	"parkin-ai-system/internal/config"
 	"parkin-ai-system/internal/controller/user"
+	"parkin-ai-system/internal/controller/vehicle"
 	"parkin-ai-system/internal/middleware"
 
 	"github.com/gogf/gf/v2/frame/g"
@@ -24,6 +25,7 @@ var (
 			config.InitConfig(ctx)
 
 			userCtrl := user.NewUser()
+			vehicleCtrl := vehicle.NewVehicle()
 
 			s := g.Server()
 
@@ -33,22 +35,23 @@ var (
 
 			s.Group("/backend/parkin/v1", func(group *ghttp.RouterGroup) {
 				group.Middleware(ghttp.MiddlewareHandlerResponse)
-
+				//guest
 				group.POST("/user/register", userCtrl.Register)
 				group.POST("/user/login", userCtrl.UserLogin)
 				group.POST("/user/refresh", userCtrl.RefreshToken)
-
+				//user
 				group.Group("/", func(authGroup *ghttp.RouterGroup) {
 					authGroup.Middleware(middleware.Auth)
 					authGroup.POST("/user/logout", userCtrl.UserLogout)
 					authGroup.GET("/user/profile", userCtrl.UserProfile)
+					authGroup.POST("/vehicles", vehicleCtrl.VehicleAdd)
 				})
 
 				group.Group("/", func(userGroup *ghttp.RouterGroup) {
 					userGroup.Middleware(middleware.UserOrAdmin)
 					userGroup.GET("/users/:id", userCtrl.UserById)
 				})
-
+				//admin
 				group.Group("/admin", func(adminGroup *ghttp.RouterGroup) {
 					adminGroup.Middleware(middleware.AdminOnly)
 					adminGroup.GET("/users", userCtrl.GetAllUsers)

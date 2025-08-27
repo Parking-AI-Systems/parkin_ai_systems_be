@@ -11,16 +11,14 @@ import (
 )
 
 type IUserUser interface {
+	GetAllUsers(ctx context.Context, req *user.GetAllUsersReq) (res *user.GetAllUsersRes, err error)
+	DeleteUser(ctx context.Context, req *user.DeleteUserReq) (res *user.DeleteUserRes, err error)
+	UpdateUserRole(ctx context.Context, req *user.UpdateUserRoleReq) (res *user.UpdateUserRoleRes, err error)
+	UserById(ctx context.Context, req *user.UserByIdReq) (res *user.UserByIdRes, err error)
 	RefreshToken(ctx context.Context, req *user.RefreshTokenReq) (res *user.RefreshTokenRes, err error)
 	UserLogin(ctx context.Context, req *user.UserLoginReq) (res *user.UserLoginRes, err error)
 	UserLogout(ctx context.Context, req *user.UserLogoutReq) (res *user.UserLogoutRes, err error)
 	UserProfile(ctx context.Context, req *user.UserProfileReq) (res *user.UserProfileRes, err error)
 	Register(ctx context.Context, req *user.RegisterReq) (res *user.RegisterRes, err error)
 	UserUpdateProfile(ctx context.Context, req *user.UserUpdateProfileReq) (res *user.UserUpdateProfileRes, err error)
-	UserById(ctx context.Context, req *user.UserByIdReq) (res *user.UserByIdRes, err error)
-	
-	// Admin endpoints
-	GetAllUsers(ctx context.Context, req *user.GetAllUsersReq) (res *user.GetAllUsersRes, err error)
-	DeleteUser(ctx context.Context, req *user.DeleteUserReq) (res *user.DeleteUserRes, err error)
-	UpdateUserRole(ctx context.Context, req *user.UpdateUserRoleReq) (res *user.UpdateUserRoleRes, err error)
 }
