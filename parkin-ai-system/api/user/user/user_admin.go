@@ -2,7 +2,6 @@ package user
 
 import "github.com/gogf/gf/v2/frame/g"
 
-// GetAllUsersReq - Admin only endpoint to get all users
 type GetAllUsersReq struct {
 	g.Meta `path:"/admin/users" method:"get" tags:"Admin" summary:"Get all users (Admin only)"`
 	Page   int `json:"page" v:"min:1" d:"1"`
@@ -26,7 +25,6 @@ type UserInfo struct {
 	CreatedAt string `json:"created_at"`
 }
 
-// DeleteUserReq - Admin only endpoint to delete users
 type DeleteUserReq struct {
 	g.Meta `path:"/admin/users/:id" method:"delete" tags:"Admin" summary:"Delete user (Admin only)"`
 	Id     int64 `json:"id" in:"path" name:"id"`
@@ -36,7 +34,6 @@ type DeleteUserRes struct {
 	Message string `json:"message"`
 }
 
-// UpdateUserRoleReq - Admin only endpoint to update user roles
 type UpdateUserRoleReq struct {
 	g.Meta `path:"/admin/users/:id/role" method:"put" tags:"Admin" summary:"Update user role (Admin only)"`
 	Id     int64  `json:"id" in:"path" name:"id"`
