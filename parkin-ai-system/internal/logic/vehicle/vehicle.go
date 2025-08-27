@@ -94,3 +94,32 @@ func (s *sVehicle) List(ctx context.Context, req *vehicle.VehicleListReq) (res *
 	res = &vehicle.VehicleListRes{Vehicles: vehicles}
 	return
 }
+
+func (s *sVehicle) Detail(ctx context.Context, req *vehicle.VehicleDetailReq) (res *vehicle.VehicleDetailRes, err error) {
+	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	if userID == "" {
+		return nil, gerror.New("Unauthorized")
+	}
+
+	v, err := dao.Vehicles.Ctx(ctx).Where("id", req.ID).One()
+	if err != nil {
+		return nil, gerror.New("Database error")
+	}
+	if v.IsEmpty() {
+		return nil, gerror.New("Vehicle not found")
+	}
+	if v["user_id"].String() != userID {
+		return nil, gerror.New("Not owner")
+	}
+
+	res = &vehicle.VehicleDetailRes{
+		ID:           v["id"].String(),
+		LicensePlate: v["license_plate"].String(),
+		Model:        v["model"].String(),
+		Color:        v["color"].String(),
+		Brand:        v["brand"].String(),
+		Type:         v["type"].String(),
+		CreatedAt:    v["created_at"].String(),
+	}
+	return
+}

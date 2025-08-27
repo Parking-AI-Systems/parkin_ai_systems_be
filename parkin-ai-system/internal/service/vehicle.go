@@ -14,6 +14,7 @@ type (
 	IVehicle interface {
 		Add(ctx context.Context, req *vehicle.VehicleAddReq) (res *vehicle.VehicleAddRes, err error)
 		List(ctx context.Context, req *vehicle.VehicleListReq) (res *vehicle.VehicleListRes, err error)
+		Detail(ctx context.Context, req *vehicle.VehicleDetailReq) (res *vehicle.VehicleDetailRes, err error)
 	}
 )
 
