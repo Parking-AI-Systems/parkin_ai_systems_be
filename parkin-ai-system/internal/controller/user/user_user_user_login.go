@@ -12,7 +12,7 @@ import (
 )
 
 func (c *ControllerUser) UserLogin(ctx context.Context, req *user.UserLoginReq) (res *user.UserLoginRes, err error) {
-	g.Log().Info(ctx, "-------------")
+	g.Log().Info(ctx, "----------------")
 	res, err = service.User().Login(ctx, req)
 	if err != nil {
 		return nil, gerror.NewCode(gcode.CodeInternalError, err.Error())

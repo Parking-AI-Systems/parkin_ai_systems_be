@@ -1,1 +1,3 @@
 {"Time":"2025-08-27 22:03:43","TraceId":"74d8cdaeeea75f1807d8e20ac9af490e","Level":"INFO","CallerPath":"user_user_user_login.go:15:","CallerFunc":"[parkin-ai-system/internal/controller/user.(*ControllerUser).UserLogin]","Content":"-------------"}
+{"Time":"2025-08-27 23:12:55","TraceId":"b466d16cb5ab5f183cd6c5007bde4ec3","Level":"INFO","CallerPath":"user_user_user_login.go:15:","CallerFunc":"[parkin-ai-system/internal/controller/user.(*ControllerUser).UserLogin]","Content":"----------------"}
+{"Time":"2025-08-27 23:13:11","TraceId":"501d0042b9ab5f183dd6c500608d31b4","Level":"INFO","CallerPath":"user_user_user_login.go:15:","CallerFunc":"[parkin-ai-system/internal/controller/user.(*ControllerUser).UserLogin]","Content":"----------------"}

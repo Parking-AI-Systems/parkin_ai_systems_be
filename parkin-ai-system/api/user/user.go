@@ -18,4 +18,9 @@ type IUserUser interface {
 	Register(ctx context.Context, req *user.RegisterReq) (res *user.RegisterRes, err error)
 	UserUpdateProfile(ctx context.Context, req *user.UserUpdateProfileReq) (res *user.UserUpdateProfileRes, err error)
 	UserById(ctx context.Context, req *user.UserByIdReq) (res *user.UserByIdRes, err error)
+	
+	// Admin endpoints
+	GetAllUsers(ctx context.Context, req *user.GetAllUsersReq) (res *user.GetAllUsersRes, err error)
+	DeleteUser(ctx context.Context, req *user.DeleteUserReq) (res *user.DeleteUserRes, err error)
+	UpdateUserRole(ctx context.Context, req *user.UpdateUserRoleReq) (res *user.UpdateUserRoleRes, err error)
 }

@@ -1,8 +1,8 @@
 package consts
 
 const (
-	RoleUser  = "role_user"
-	RoleAdmin = "role_admin"
+	RoleUser  = "user"
+	RoleAdmin = "admin"
 
 	TokenTypeAccess  = "token_access"
 	TokenTypeRefresh = "token_refresh"

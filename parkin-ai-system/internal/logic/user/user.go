@@ -6,6 +6,7 @@ import (
 	"parkin-ai-system/api/user/user"
 	"parkin-ai-system/internal/consts"
 	"parkin-ai-system/internal/dao"
+	"parkin-ai-system/internal/middleware"
 	"parkin-ai-system/internal/model"
 	"parkin-ai-system/internal/service"
 	"parkin-ai-system/utility"
@@ -22,6 +23,10 @@ type sUser struct {
 
 func Init() {
 	service.RegisterUser(&sUser{})
+}
+
+func init() {
+	Init()
 }
 
 func (s *sUser) SignUp(ctx context.Context, req *user.RegisterReq) (res *user.RegisterRes, err error) {
@@ -290,6 +295,108 @@ func (s *sUser) UserUpdateProfile(ctx context.Context, req *user.UserUpdateProfi
 	return
 }
 
-func init() {
-	Init()
+func (s *sUser) GetAllUsers(ctx context.Context, req *user.GetAllUsersReq) (res *user.GetAllUsersRes, err error) {
+	offset := (req.Page - 1) * req.Size
+	total, err := dao.Users.Ctx(ctx).Count()
+	if err != nil {
+		return nil, err
+	}
+	users, err := dao.Users.Ctx(ctx).
+		Fields("id", "username", "email", "phone", "full_name", "role", "created_at").
+		Offset(offset).
+		Limit(req.Size).
+		Order("created_at DESC").
+		All()
+	if err != nil {
+		return nil, err
+	}
+	userList := make([]user.UserInfo, 0, len(users))
+	for _, u := range users {
+		userList = append(userList, user.UserInfo{
+			UserID:    u["id"].Int64(),
+			Username:  u["username"].String(),
+			Email:     u["email"].String(),
+			Phone:     u["phone"].String(),
+			FullName:  u["full_name"].String(),
+			Role:      u["role"].String(),
+			CreatedAt: u["created_at"].String(),
+		})
+	}
+	res = &user.GetAllUsersRes{
+		Users: userList,
+		Total: int(total),
+		Page:  req.Page,
+		Size:  req.Size,
+	}
+	return
+}
+
+func (s *sUser) DeleteUser(ctx context.Context, req *user.DeleteUserReq) (res *user.DeleteUserRes, err error) {
+	userRecord, err := dao.Users.Ctx(ctx).Where("id", req.Id).One()
+	if err != nil {
+		return nil, err
+	}
+	if userRecord.IsEmpty() {
+		return nil, gerror.New("User not found")
+	}
+	currentUserID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	if currentUserID == userRecord["id"].String() {
+		return nil, gerror.New("Cannot delete yourself")
+	}
+	_, err = dao.Users.Ctx(ctx).Where("id", req.Id).Delete()
+	if err != nil {
+		return nil, err
+	}
+	_, err = dao.ApiTokens.Ctx(ctx).Where("user_id", req.Id).Delete()
+	if err != nil {
+		g.Log().Warning(ctx, "Failed to delete user tokens:", err)
+	}
+	res = &user.DeleteUserRes{
+		Message: "User deleted successfully",
+	}
+	return
+}
+
+func (s *sUser) UpdateUserRole(ctx context.Context, req *user.UpdateUserRoleReq) (res *user.UpdateUserRoleRes, err error) {
+	userRecord, err := dao.Users.Ctx(ctx).Where("id", req.Id).One()
+	if err != nil {
+		return nil, err
+	}
+	if userRecord.IsEmpty() {
+		return nil, gerror.New("User not found")
+	}
+	currentUserID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	if currentUserID == userRecord["id"].String() {
+		return nil, gerror.New("Cannot change your own role")
+	}
+	_, err = dao.Users.Ctx(ctx).
+		Where("id", req.Id).
+		Data(g.Map{"role": req.Role}).
+		Update()
+	if err != nil {
+		return nil, err
+	}
+	_, err = dao.ApiTokens.Ctx(ctx).
+		Where("user_id", req.Id).
+		Data(g.Map{"is_active": false}).
+		Update()
+	if err != nil {
+		g.Log().Warning(ctx, "Failed to invalidate user tokens:", err)
+	}
+	res = &user.UpdateUserRoleRes{
+		Message: "User role updated successfully",
+	}
+	return
+}
+
+func (s *sUser) UserUpdateProfileWithRBAC(ctx context.Context, req *user.UserUpdateProfileReq) (res *user.UserUpdateProfileRes, err error) {
+	currentUserID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	if !middleware.CheckResourceOwnership(g.RequestFromCtx(ctx), currentUserID) {
+		return nil, gerror.New("Forbidden: You can only update your own profile")
+	}
+	// ... existing update logic here ...
+	res = &user.UserUpdateProfileRes{
+		Message: "Profile updated successfully",
+	}
+	return
 }

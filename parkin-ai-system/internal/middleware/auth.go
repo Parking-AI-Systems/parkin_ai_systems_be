@@ -18,21 +18,6 @@ import (
 )
 
 func Auth(r *ghttp.Request) {
-	skipPaths := []string{
-		"/user/login",
-		"/user/register",
-		"/user/refresh",
-		"/health",
-		"/swagger",
-	}
-
-	for _, path := range skipPaths {
-		if strings.HasPrefix(r.URL.Path, path) {
-			r.Middleware.Next()
-			return
-		}
-	}
-
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		r.Response.WriteStatusExit(http.StatusUnauthorized, g.Map{
@@ -74,7 +59,27 @@ func Auth(r *ghttp.Request) {
 		return
 	}
 
+	userRecord, err := g.Model("users").Where("id", userID).One()
+	if err != nil {
+		g.Log().Error(r.Context(), "Database error while checking user role:", err)
+		r.Response.WriteStatusExit(http.StatusInternalServerError, g.Map{
+			"code":    500,
+			"message": "Internal server error",
+		})
+		return
+	}
+
+	if userRecord.IsEmpty() {
+		r.Response.WriteStatusExit(http.StatusUnauthorized, g.Map{
+			"code":    401,
+			"message": "User not found",
+		})
+		return
+	}
+
+	userRole := userRecord["role"].String()
 	r.SetCtxVar("user_id", userID)
+	r.SetCtxVar("user_role", userRole)
 	r.SetCtxVar("claims", claims)
 
 	r.Middleware.Next()
@@ -146,6 +151,12 @@ func (s *authService) handleTokenRefresh(r *ghttp.Request) error {
 	r.Response.Header().Set("New-Access-Token", newAccessToken)
 	r.Response.Header().Set("New-Refresh-Token", newRefreshToken)
 
+	userRecord, err := g.Model("users").Where("id", userId).One()
+	if err == nil && !userRecord.IsEmpty() {
+		userRole := userRecord["role"].String()
+		r.SetCtxVar("user_role", userRole)
+	}
+
 	r.SetCtxVar("user_id", userId)
 	r.SetCtxVar("token_refreshed", true)
 
@@ -163,6 +174,11 @@ func OptionalAuth(r *ghttp.Request) {
 		claims, err := utility.ParseJWT(accessToken)
 		if err == nil {
 			if userID, ok := claims["sub"].(string); ok {
+				userRecord, err := g.Model("users").Where("id", userID).One()
+				if err == nil && !userRecord.IsEmpty() {
+					userRole := userRecord["role"].String()
+					r.SetCtxVar("user_role", userRole)
+				}
 				r.SetCtxVar("user_id", userID)
 				r.SetCtxVar("claims", claims)
 			}
