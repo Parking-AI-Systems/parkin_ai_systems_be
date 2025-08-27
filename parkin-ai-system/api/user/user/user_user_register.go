@@ -7,7 +7,7 @@ type RegisterReq struct {
 	Username  string `json:"username" v:"required#Username is required"`
 	Password  string `json:"password" v:"required#Password is required"`
 	Email     string `json:"email" v:"required#Email is required|email#Invalid email format"`
-	Phone     string `json:"phone" v:"phone#Invalid phone number"`
+	Phone     string `json:"phone" v:"regex:^\\d{10,15}$#Invalid phone number"`
 	FullName  string `json:"full_name"`
 	Gender    string `json:"gender" v:"in:male,female,other#Gender must be male, female, or other"`
 	BirthDate string `json:"birth_date" v:"date#Invalid date format"`

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"parkin-ai-system/api/user/user"
+	"parkin-ai-system/internal/consts"
 	"parkin-ai-system/internal/dao"
 	"parkin-ai-system/internal/model"
 	"parkin-ai-system/internal/service"
@@ -42,10 +43,14 @@ func (s *sUser) SignUp(ctx context.Context, req *user.RegisterReq) (res *user.Re
 	}
 
 	userId, err := dao.Users.Ctx(ctx).Data(g.Map{
-		"email":    req.Email,
-		"password": hashedPwd,
-		"username": req.Username,
-		"phone":    req.Phone,
+		"email":         req.Email,
+		"password_hash": hashedPwd,
+		"username":      req.Username,
+		"phone":         req.Phone,
+		"full_name":     req.FullName,
+		"gender":        req.Gender,
+		"birth_date":    req.BirthDate,
+		"role":          consts.RoleUser,
 	}).InsertAndGetId()
 	if err != nil {
 		return nil, gerror.New("Failed to create user")
@@ -71,6 +76,7 @@ func (s *sUser) Login(ctx context.Context, req *user.UserLoginReq) (res *user.Us
 	if err != nil {
 		return nil, gerror.New("Database error")
 	}
+	fmt.Println(userRecord)
 	if userRecord.IsEmpty() {
 		return nil, gerror.New("User not found")
 	}
@@ -282,4 +288,8 @@ func (s *sUser) UserUpdateProfile(ctx context.Context, req *user.UserUpdateProfi
 		Message: "Profile updated successfully",
 	}
 	return
+}
+
+func init() {
+	Init()
 }
