@@ -123,3 +123,50 @@ func (s *sVehicle) Detail(ctx context.Context, req *vehicle.VehicleDetailReq) (r
 	}
 	return
 }
+
+func (s *sVehicle) Update(ctx context.Context, req *vehicle.VehicleUpdateReq) (res *vehicle.VehicleUpdateRes, err error) {
+	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	if userID == "" {
+		return nil, gerror.New("Unauthorized")
+	}
+
+	v, err := dao.Vehicles.Ctx(ctx).Where("id", req.ID).One()
+	if err != nil {
+		return nil, gerror.New("Database error")
+	}
+	if v.IsEmpty() {
+		return nil, gerror.New("Vehicle not found")
+	}
+	if v["user_id"].String() != userID {
+		return nil, gerror.New("Not owner")
+	}
+
+	_, err = dao.Vehicles.Ctx(ctx).
+		Where("id", req.ID).
+		Data(g.Map{
+			"model": req.Model,
+			"color": req.Color,
+			"brand": req.Brand,
+			"type":  req.Type,
+		}).Update()
+	if err != nil {
+		return nil, gerror.New("Failed to update vehicle")
+	}
+
+	// Return updated vehicle
+	v, err = dao.Vehicles.Ctx(ctx).Where("id", req.ID).One()
+	if err != nil {
+		return nil, gerror.New("Database error")
+	}
+
+	res = &vehicle.VehicleUpdateRes{
+		ID:           v["id"].String(),
+		LicensePlate: v["license_plate"].String(),
+		Model:        v["model"].String(),
+		Color:        v["color"].String(),
+		Brand:        v["brand"].String(),
+		Type:         v["type"].String(),
+		CreatedAt:    v["created_at"].String(),
+	}
+	return
+}

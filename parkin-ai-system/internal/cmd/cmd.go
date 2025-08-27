@@ -47,6 +47,7 @@ var (
 					authGroup.POST("/vehicles", vehicleCtrl.VehicleAdd)
 					authGroup.GET("/vehicles", vehicleCtrl.VehicleList)
 					authGroup.GET("/vehicles/{id}", vehicleCtrl.VehicleDetail)
+					authGroup.PATCH("/vehicles/{id}", vehicleCtrl.VehicleUpdate)
 				})
 
 				group.Group("/", func(userGroup *ghttp.RouterGroup) {
