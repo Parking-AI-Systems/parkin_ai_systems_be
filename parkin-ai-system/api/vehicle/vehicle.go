@@ -12,4 +12,5 @@ import (
 
 type IVehicleVehicle interface {
 	VehicleAdd(ctx context.Context, req *vehicle.VehicleAddReq) (res *vehicle.VehicleAddRes, err error)
+	VehicleList(ctx context.Context, req *vehicle.VehicleListReq) (res *vehicle.VehicleListRes, err error)
 }

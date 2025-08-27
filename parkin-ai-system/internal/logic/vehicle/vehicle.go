@@ -63,3 +63,34 @@ func (s *sVehicle) Add(ctx context.Context, req *vehicle.VehicleAddReq) (res *ve
 	}
 	return
 }
+
+func (s *sVehicle) List(ctx context.Context, req *vehicle.VehicleListReq) (res *vehicle.VehicleListRes, err error) {
+	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	if userID == "" {
+		return nil, gerror.New("Unauthorized")
+	}
+
+	records, err := dao.Vehicles.Ctx(ctx).
+		Where("user_id", userID).
+		Order("created_at DESC").
+		All()
+	if err != nil {
+		return nil, gerror.New("Database error")
+	}
+
+	vehicles := make([]vehicle.VehicleListItem, 0, len(records))
+	for _, v := range records {
+		vehicles = append(vehicles, vehicle.VehicleListItem{
+			ID:           v["id"].String(),
+			LicensePlate: v["license_plate"].String(),
+			Model:        v["model"].String(),
+			Color:        v["color"].String(),
+			Brand:        v["brand"].String(),
+			Type:         v["type"].String(),
+			CreatedAt:    v["created_at"].String(),
+		})
+	}
+
+	res = &vehicle.VehicleListRes{Vehicles: vehicles}
+	return
+}

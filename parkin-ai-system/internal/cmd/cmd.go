@@ -45,6 +45,7 @@ var (
 					authGroup.POST("/user/logout", userCtrl.UserLogout)
 					authGroup.GET("/user/profile", userCtrl.UserProfile)
 					authGroup.POST("/vehicles", vehicleCtrl.VehicleAdd)
+					authGroup.GET("/vehicles", vehicleCtrl.VehicleList)
 				})
 
 				group.Group("/", func(userGroup *ghttp.RouterGroup) {
