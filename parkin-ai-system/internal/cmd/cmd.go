@@ -8,6 +8,8 @@ import (
 	"parkin-ai-system/internal/controller/vehicle"
 	"parkin-ai-system/internal/middleware"
 
+	_ "parkin-ai-system/internal/logic/parking_lot"
+
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gcmd"

@@ -2,13 +2,14 @@ package vehicle
 
 import (
 	"context"
+	"fmt"
 	"parkin-ai-system/api/vehicle/vehicle"
 	"parkin-ai-system/internal/dao"
 	"parkin-ai-system/internal/service"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/util/guid"
+	"github.com/gogf/gf/v2/os/gtime"
 )
 
 type sVehicle struct{}
@@ -43,23 +44,26 @@ func (s *sVehicle) Add(ctx context.Context, req *vehicle.VehicleAddReq) (res *ve
 		return nil, gerror.New("License plate already exists")
 	}
 
-	vehicleID := guid.S()
-	_, err = dao.Vehicles.Ctx(ctx).Data(g.Map{
-		"id":            vehicleID,
+	result, err := dao.Vehicles.Ctx(ctx).Data(g.Map{
 		"user_id":       userID,
 		"license_plate": req.LicensePlate,
 		"model":         req.Model,
 		"color":         req.Color,
 		"brand":         req.Brand,
 		"type":          req.Type,
-		"user":          userID,
+		"created_at":    gtime.Now(),
 	}).Insert()
 	if err != nil {
 		return nil, gerror.New("Failed to add vehicle")
 	}
 
+	vehicleID, err := result.LastInsertId()
+	if err != nil {
+		return nil, gerror.New("Failed to get vehicle id")
+	}
+
 	res = &vehicle.VehicleAddRes{
-		VehicleID: vehicleID,
+		VehicleID: fmt.Sprintf("%d", vehicleID),
 	}
 	return
 }
