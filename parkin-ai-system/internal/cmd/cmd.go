@@ -5,7 +5,7 @@ import (
 	"parkin-ai-system/internal/config"
 	"parkin-ai-system/internal/controller/parking_lot"
 	"parkin-ai-system/internal/controller/user"
-	"parkin-ai-system/internal/controller/vehicle"
+	"parkin-ai-system/internal/controller/vehicles"
 	"parkin-ai-system/internal/middleware"
 
 	_ "parkin-ai-system/internal/logic/parking_lot"
@@ -28,31 +28,35 @@ var (
 			config.InitConfig(ctx)
 
 			userCtrl := user.NewUser()
-			vehicleCtrl := vehicle.NewVehicle()
+			vehiclesCtrl := &vehicles.ControllerVehicles{}
 			parkingLotCtrl := parking_lot.NewParkingLot()
 
 			s := g.Server()
 
 			s.Logger().SetHandlers(glog.HandlerJson)
-
-			s.Use(CORS, ghttp.MiddlewareHandlerResponse)
+			s.Use(middleware.CORS, ghttp.MiddlewareHandlerResponse)
 
 			s.Group("/backend/parkin/v1", func(group *ghttp.RouterGroup) {
 				group.Middleware(ghttp.MiddlewareHandlerResponse)
-				//guest
+
+				// Public routes (no auth required)
 				group.POST("/user/register", userCtrl.Register)
 				group.POST("/user/login", userCtrl.UserLogin)
 				group.POST("/user/refresh", userCtrl.RefreshToken)
 				group.GET("/parking-lots/{id}", parkingLotCtrl.ParkingLotDetail)
-				//user
+
+
+				// Protected routes (auth required)
 				group.Group("/", func(authGroup *ghttp.RouterGroup) {
 					authGroup.Middleware(middleware.Auth)
-					authGroup.POST("/user/logout", userCtrl.UserLogout)
+					// Vehicles CRUD
+					authGroup.POST("/vehicles", vehiclesCtrl.Create)
+					authGroup.GET("/vehicles", vehiclesCtrl.List)
+					authGroup.GET("/vehicles/{id}", vehiclesCtrl.Get)
+					authGroup.PUT("/vehicles/{id}", vehiclesCtrl.Update)
+					authGroup.DELETE("/vehicles/{id}", vehiclesCtrl.Delete)
+
 					authGroup.GET("/user/profile", userCtrl.UserProfile)
-					authGroup.POST("/vehicles", vehicleCtrl.VehicleAdd)
-					authGroup.GET("/vehicles", vehicleCtrl.VehicleList)
-					authGroup.GET("/vehicles/{id}", vehicleCtrl.VehicleDetail)
-					authGroup.PATCH("/vehicles/{id}", vehicleCtrl.VehicleUpdate)
 					authGroup.POST("/parking-lots", parkingLotCtrl.ParkingLotAdd)
 				})
 
