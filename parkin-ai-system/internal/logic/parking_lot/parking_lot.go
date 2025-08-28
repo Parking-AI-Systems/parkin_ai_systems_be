@@ -28,7 +28,7 @@ func (s *sParkingLot) ParkingLotAdd(ctx context.Context, req *parking_lot.Parkin
 	if userID == "" {
 		return nil, gerror.New("Unauthorized")
 	}
-	if userRole != "admin" {
+	if userRole != "role_admin" {
 		return nil, gerror.New("Not admin")
 	}
 
