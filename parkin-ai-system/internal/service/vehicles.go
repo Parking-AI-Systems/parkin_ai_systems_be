@@ -5,7 +5,6 @@ import (
 	"parkin-ai-system/api/vehicles"
 	"parkin-ai-system/internal/dao"
 	"parkin-ai-system/internal/model/do"
-	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/util/gconv"
 )
 
