@@ -46,6 +46,7 @@ var (
 				group.POST("/user/refresh", userCtrl.RefreshToken)
 				group.GET("/parking-lots/{id}", parkingLotCtrl.ParkingLotDetail)
 
+
 				// Protected routes (auth required)
 				group.Group("/", func(authGroup *ghttp.RouterGroup) {
 					authGroup.Middleware(middleware.Auth)

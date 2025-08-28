@@ -1,11 +1,11 @@
 server:
-  address:     ":8000"
+  address: ":8000"
   openapiPath: "/backend/parkin-ai-systems/v1/api.json"
   swaggerPath: "/backend/parkin-ai-systems/v1/swagger"
   dumpRouterMap: false
-  errorStack: false 
-  errorLogEnabled: false 
-  errorLogPattern: "error-{Ymd}.log" 
+  errorStack: false
+  errorLogEnabled: false
+  errorLogPattern: "error-{Ymd}.log"
 
 logger:
   path: "./log/"
@@ -32,7 +32,7 @@ database:
     level: "all"
     stdout: true
   default:
-    link: "jdbc:postgresql://ep-bitter-dust-a1n27idx-pooler.ap-southeast-1.aws.neon.tech:5432/neondb?sslmode=require&channelBinding=require"
+    link: "pgsql:neondb_owner:npg_BNZpL67rcRiw@tcp(ep-bitter-dust-a1n27idx-pooler.ap-southeast-1.aws.neon.tech:5432)/neondb?sslmode=require&channelBinding=require"
     debug: true
     maxIdle: "10"
     maxOpen: "10"

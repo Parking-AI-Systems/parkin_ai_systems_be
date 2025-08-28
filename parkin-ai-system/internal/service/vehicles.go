@@ -6,6 +6,7 @@ import (
 	"parkin-ai-system/internal/dao"
 	"parkin-ai-system/internal/model/do"
 	"github.com/gogf/gf/v2/util/gconv"
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 type sVehicles struct{}
@@ -18,10 +19,14 @@ func Vehicles() *sVehicles {
 	return &vehiclesService
 }
 
-// Create vehicle
+
+
 func (s *sVehicles) Create(ctx context.Context, req *vehicles.CreateVehicleReq) (*vehicles.CreateVehicleRes, error) {
 	data := do.Vehicles{}
 	gconv.Struct(req, &data)
+	// Lấy user_id từ context (được middleware auth gán vào)
+	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").Int64()
+	data.UserId = userID
 	id, err := dao.Vehicles.Ctx(ctx).Data(data).InsertAndGetId()
 	if err != nil {
 		return nil, err

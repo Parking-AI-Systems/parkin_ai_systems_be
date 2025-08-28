@@ -5,9 +5,8 @@ import (
 )
 
 // Tạo mới vehicle
- type CreateVehicleReq struct {
+type CreateVehicleReq struct {
 	g.Meta       `path:"/vehicles" method:"post" tags:"Vehicles" summary:"Create vehicle"`
-	UserId       int64  `json:"user_id" description:"User ID"`
 	LicensePlate string `json:"license_plate"`
 	Brand        string `json:"brand"`
 	Model        string `json:"model"`
