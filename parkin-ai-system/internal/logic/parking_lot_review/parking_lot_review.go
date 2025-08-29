@@ -5,6 +5,7 @@ import (
 	"parkin-ai-system/api/parking_lot_review"
 	"parkin-ai-system/internal/dao"
 	"parkin-ai-system/internal/model/do"
+	"parkin-ai-system/internal/service"
 	"github.com/gogf/gf/v2/os/gtime"
 )
 
@@ -18,12 +19,12 @@ func (s *sParkingLotReview) ParkingLotReviewAdd(ctx context.Context, req *parkin
 		Comment: req.Comment,
 		CreatedAt: gtime.Now(),
 	}
-	result, err := dao.ParkingLotReviews.Ctx(ctx).Data(review).InsertAndGetId()
-	if err != nil {
-		return nil, err
-	}
-	res = &parking_lot_review.ParkingLotReviewAddRes{ReviewId: result.(int64)}
-	return
+       result, err := dao.ParkingLotReviews.Ctx(ctx).Data(review).InsertAndGetId()
+       if err != nil {
+	       return nil, err
+       }
+       res = &parking_lot_review.ParkingLotReviewAddRes{ReviewId: result}
+       return
 }
 
 func (s *sParkingLotReview) ParkingLotReviewUpdate(ctx context.Context, req *parking_lot_review.ParkingLotReviewUpdateReq) (res *parking_lot_review.ParkingLotReviewUpdateRes, err error) {
