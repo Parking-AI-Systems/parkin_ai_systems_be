@@ -34,7 +34,7 @@ var (
 			s := g.Server()
 
 			s.Logger().SetHandlers(glog.HandlerJson)
-			s.Use(middleware.CORS, ghttp.MiddlewareHandlerResponse)
+			s.Use(CORS, ghttp.MiddlewareHandlerResponse)
 
 			s.Group("/backend/parkin/v1", func(group *ghttp.RouterGroup) {
 				group.Middleware(ghttp.MiddlewareHandlerResponse)
@@ -58,6 +58,9 @@ var (
 
 					authGroup.GET("/user/profile", userCtrl.UserProfile)
 					authGroup.POST("/parking-lots", parkingLotCtrl.ParkingLotAdd)
+					authGroup.GET("/parking-lots", parkingLotCtrl.ParkingLotList)
+					authGroup.PUT("/parking-lots/{id}", parkingLotCtrl.ParkingLotUpdate)
+					authGroup.DELETE("/parking-lots/{id}", parkingLotCtrl.ParkingLotDelete)
 				})
 
 				group.Group("/", func(userGroup *ghttp.RouterGroup) {
