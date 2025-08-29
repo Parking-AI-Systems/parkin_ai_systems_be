@@ -34,7 +34,7 @@ var (
 			s := g.Server()
 
 			s.Logger().SetHandlers(glog.HandlerJson)
-			s.Use(middleware.CORS, ghttp.MiddlewareHandlerResponse)
+			s.Use(CORS, ghttp.MiddlewareHandlerResponse)
 
 			s.Group("/backend/parkin/v1", func(group *ghttp.RouterGroup) {
 				group.Middleware(ghttp.MiddlewareHandlerResponse)

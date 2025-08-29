@@ -1,16 +1,57 @@
-package parking_lot
+// Lấy danh sách parking lot
+func (s *sParkingLot) ParkingLotList(ctx context.Context, req *parking_lot.ParkingLotListReq) (res *parking_lot.ParkingLotListRes, err error) {
+	var lots []parking_lot.ParkingLotInfo
+	err = dao.ParkingLots.Ctx(ctx).Scan(&lots)
+	if err != nil {
+		return nil, gerror.New("Database error")
+	}
+	res = &parking_lot.ParkingLotListRes{Lots: lots}
+	return
+}
 
-import (
-	"context"
-	"parkin-ai-system/api/parking_lot/parking_lot"
-	"parkin-ai-system/internal/dao"
-	"parkin-ai-system/internal/model/do"
-	"parkin-ai-system/internal/service"
+// Cập nhật parking lot
+func (s *sParkingLot) ParkingLotUpdate(ctx context.Context, req *parking_lot.ParkingLotUpdateReq) (res *parking_lot.ParkingLotUpdateRes, err error) {
+	userRole := g.RequestFromCtx(ctx).GetCtxVar("user_role").String()
+	if userRole != "role_admin" {
+		return nil, gerror.New("Not admin")
+	}
+	data := do.ParkingLots{
+		Name:         req.Name,
+		Address:      req.Address,
+		Latitude:     req.Latitude,
+		Longitude:    req.Longitude,
+		PricePerHour: req.PricePerHour,
+		Description:  req.Description,
+		OpenTime:     req.OpenTime,
+		CloseTime:    req.CloseTime,
+		ImageUrl:     req.ImageUrl,
+		IsActive:     req.IsActive,
+		IsVerified:   req.IsVerified,
+		TotalSlots:   req.TotalSlots,
+		AvailableSlots: req.AvailableSlots,
+	}
+	_, err = dao.ParkingLots.Ctx(ctx).Where("id", req.Id).Data(data).Update()
+	if err != nil {
+		return nil, gerror.New("Database error")
+	}
+	res = &parking_lot.ParkingLotUpdateRes{Success: true}
+	return
+}
 
-	"github.com/gogf/gf/v2/errors/gerror"
-	"github.com/gogf/gf/v2/frame/g"
-	"github.com/gogf/gf/v2/util/guid"
-)
+type sParkingLot struct{}
+// Xóa parking lot
+func (s *sParkingLot) ParkingLotDelete(ctx context.Context, req *parking_lot.ParkingLotDeleteReq) (res *parking_lot.ParkingLotDeleteRes, err error) {
+	userRole := g.RequestFromCtx(ctx).GetCtxVar("user_role").String()
+	if userRole != "role_admin" {
+		return nil, gerror.New("Not admin")
+	}
+	_, err = dao.ParkingLots.Ctx(ctx).Where("id", req.Id).Delete()
+	if err != nil {
+		return nil, gerror.New("Database error")
+	}
+	res = &parking_lot.ParkingLotDeleteRes{Success: true}
+	return
+}
 
 type sParkingLot struct{}
 
@@ -40,16 +81,24 @@ func (s *sParkingLot) ParkingLotAdd(ctx context.Context, req *parking_lot.Parkin
 		return nil, gerror.New("Location already exists")
 	}
 
+	// Lấy owner_id từ token
+	ownerID := g.RequestFromCtx(ctx).GetCtxVar("user_id").Int64()
 	lotId := guid.S()
 	_, err = dao.ParkingLots.Ctx(ctx).Data(do.ParkingLots{
 		Name:           req.Name,
 		Address:        req.Address,
 		Latitude:       req.Latitude,
 		Longitude:      req.Longitude,
+		OwnerId:        ownerID,
+		IsVerified:     false,
+		IsActive:       true,
 		TotalSlots:     req.TotalSlots,
 		AvailableSlots: req.TotalSlots,
-		IsActive:       true,
-		IsVerified:     false,
+		PricePerHour:   req.PricePerHour,
+		Description:    req.Description,
+		OpenTime:       req.OpenTime,
+		CloseTime:      req.CloseTime,
+		ImageUrl:       req.ImageUrl,
 	}).Insert()
 	if err != nil {
 		return nil, gerror.New("Database error")
