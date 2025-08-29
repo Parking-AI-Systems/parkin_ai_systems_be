@@ -58,6 +58,9 @@ var (
 
 					authGroup.GET("/user/profile", userCtrl.UserProfile)
 					authGroup.POST("/parking-lots", parkingLotCtrl.ParkingLotAdd)
+					authGroup.GET("/parking-lots", parkingLotCtrl.ParkingLotList)
+					authGroup.PUT("/parking-lots/{id}", parkingLotCtrl.ParkingLotUpdate)
+					authGroup.DELETE("/parking-lots/{id}", parkingLotCtrl.ParkingLotDelete)
 				})
 
 				group.Group("/", func(userGroup *ghttp.RouterGroup) {
