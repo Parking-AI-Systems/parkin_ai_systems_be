@@ -4,11 +4,13 @@ import (
 	"context"
 	"parkin-ai-system/internal/config"
 	"parkin-ai-system/internal/controller/parking_lot"
+	"parkin-ai-system/internal/controller/parking_lot_review"
 	"parkin-ai-system/internal/controller/user"
 	"parkin-ai-system/internal/controller/vehicles"
 	"parkin-ai-system/internal/middleware"
 
 	_ "parkin-ai-system/internal/logic/parking_lot"
+	_ "parkin-ai-system/internal/logic/parking_lot_review"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -27,9 +29,10 @@ var (
 
 			config.InitConfig(ctx)
 
-			userCtrl := user.NewUser()
-			vehiclesCtrl := &vehicles.ControllerVehicles{}
-			parkingLotCtrl := parking_lot.NewParkingLot()
+					   userCtrl := user.NewUser()
+					   vehiclesCtrl := &vehicles.ControllerVehicles{}
+					   parkingLotCtrl := parking_lot.NewParkingLot()
+					   parkingLotReviewCtrl := parking_lot_review.NewParkingLotReview()
 
 			s := g.Server()
 
@@ -47,21 +50,28 @@ var (
 
 
 				// Protected routes (auth required)
-				group.Group("/", func(authGroup *ghttp.RouterGroup) {
-					authGroup.Middleware(middleware.Auth)
-					// Vehicles CRUD
-					authGroup.POST("/vehicles", vehiclesCtrl.Create)
-					authGroup.GET("/vehicles", vehiclesCtrl.List)
-					authGroup.GET("/vehicles/{id}", vehiclesCtrl.Get)
-					authGroup.PUT("/vehicles/{id}", vehiclesCtrl.Update)
-					authGroup.DELETE("/vehicles/{id}", vehiclesCtrl.Delete)
+			       group.Group("/", func(authGroup *ghttp.RouterGroup) {
+				       authGroup.Middleware(middleware.Auth)
+				       // Vehicles CRUD
+				       authGroup.POST("/vehicles", vehiclesCtrl.Create)
+				       authGroup.GET("/vehicles", vehiclesCtrl.List)
+				       authGroup.GET("/vehicles/{id}", vehiclesCtrl.Get)
+				       authGroup.PUT("/vehicles/{id}", vehiclesCtrl.Update)
+				       authGroup.DELETE("/vehicles/{id}", vehiclesCtrl.Delete)
 
-					authGroup.GET("/user/profile", userCtrl.UserProfile)
-					authGroup.POST("/parking-lots", parkingLotCtrl.ParkingLotAdd)
-					authGroup.GET("/parking-lots", parkingLotCtrl.ParkingLotList)
-					authGroup.PUT("/parking-lots/{id}", parkingLotCtrl.ParkingLotUpdate)
-					authGroup.DELETE("/parking-lots/{id}", parkingLotCtrl.ParkingLotDelete)
-				})
+				       authGroup.GET("/user/profile", userCtrl.UserProfile)
+				       authGroup.POST("/parking-lots", parkingLotCtrl.ParkingLotAdd)
+				       authGroup.GET("/parking-lots", parkingLotCtrl.ParkingLotList)
+				       authGroup.PUT("/parking-lots/{id}", parkingLotCtrl.ParkingLotUpdate)
+				       authGroup.DELETE("/parking-lots/{id}", parkingLotCtrl.ParkingLotDelete)
+
+				       // Parking Lot Review CRUD
+				       authGroup.POST("/parking-lot-reviews", parkingLotReviewCtrl.ParkingLotReviewAdd)
+				       authGroup.GET("/parking-lot-reviews", parkingLotReviewCtrl.ParkingLotReviewList)
+				       authGroup.GET("/parking-lot-reviews/{id}", parkingLotReviewCtrl.ParkingLotReviewDetail)
+				       authGroup.PUT("/parking-lot-reviews/{id}", parkingLotReviewCtrl.ParkingLotReviewUpdate)
+				       authGroup.DELETE("/parking-lot-reviews/{id}", parkingLotReviewCtrl.ParkingLotReviewDelete)
+			       })
 
 				group.Group("/", func(userGroup *ghttp.RouterGroup) {
 					userGroup.Middleware(middleware.UserOrAdmin)
