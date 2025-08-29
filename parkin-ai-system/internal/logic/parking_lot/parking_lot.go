@@ -93,6 +93,14 @@ func (s *sParkingLot) ParkingLotAdd(ctx context.Context, req *api_add.ParkingLot
 	// Lấy owner_id từ token
 	ownerID := g.RequestFromCtx(ctx).GetCtxVar("user_id").Int64()
 	lotId := guid.S()
+       openTimeStr := req.OpenTime
+       closeTimeStr := req.CloseTime
+       if len(openTimeStr) == 5 { // HH:mm
+	       openTimeStr = "2000-01-01 " + openTimeStr + ":00"
+       }
+       if len(closeTimeStr) == 5 {
+	       closeTimeStr = "2000-01-01 " + closeTimeStr + ":00"
+       }
        _, err = dao.ParkingLots.Ctx(ctx).Data(do.ParkingLots{
 	       Name:           req.Name,
 	       Address:        req.Address,
@@ -103,11 +111,11 @@ func (s *sParkingLot) ParkingLotAdd(ctx context.Context, req *api_add.ParkingLot
 	       IsActive:       true,
 	       TotalSlots:     req.TotalSlots,
 	       AvailableSlots: req.TotalSlots,
-	       PricePerHour:   0, // req.PricePerHour không có trong struct gốc
-	       Description:    "", // req.Description không có trong struct gốc
-	       OpenTime:       gtime.NewFromStr("") , // req.OpenTime không có trong struct gốc
-	       CloseTime:      gtime.NewFromStr("") , // req.CloseTime không có trong struct gốc
-	       ImageUrl:       "", // req.ImageUrl không có trong struct gốc
+	       PricePerHour:   req.PricePerHour,
+	       Description:    req.Description,
+	       OpenTime:       gtime.NewFromStr(openTimeStr),
+	       CloseTime:      gtime.NewFromStr(closeTimeStr),
+	       ImageUrl:       req.ImageUrl,
        }).Insert()
 	if err != nil {
 		return nil, gerror.New("Database error")
@@ -139,7 +147,14 @@ func (s *sParkingLot) ParkingLotDetail(ctx context.Context, req *api_detail.Park
 		return nil, gerror.New("Database error")
 	}
 
-	lotInfo := &api_detail.ParkingLotInfo{
+       var openTimeStr, closeTimeStr string
+       if lot["open_time"].GTime() != nil {
+	       openTimeStr = lot["open_time"].GTime().Format("H:i")
+       }
+       if lot["close_time"].GTime() != nil {
+	       closeTimeStr = lot["close_time"].GTime().Format("H:i")
+       }
+       lotInfo := &api_detail.ParkingLotInfo{
 	       Id:             lot["id"].String(),
 	       Name:           lot["name"].String(),
 	       Address:        lot["address"].String(),
@@ -147,7 +162,13 @@ func (s *sParkingLot) ParkingLotDetail(ctx context.Context, req *api_detail.Park
 	       Longitude:      lot["longitude"].Float64(),
 	       TotalSlots:     lot["total_slots"].Int(),
 	       AvailableSlots: lot["available_slots"].Int(),
+	       PricePerHour:   lot["price_per_hour"].Float64(),
 	       Description:    lot["description"].String(),
+	       OpenTime:       openTimeStr,
+	       CloseTime:      closeTimeStr,
+	       ImageUrl:       lot["image_url"].String(),
+	       IsActive:       lot["is_active"].Bool(),
+	       IsVerified:     lot["is_verified"].Bool(),
        }
 	slotList := make([]api_detail.ParkingSlotInfo, 0, len(slots))
        for _, s := range slots {

@@ -24,7 +24,13 @@ type ParkingLotInfo struct {
 	Longitude      float64 `json:"longitude"`
 	TotalSlots     int     `json:"total_slots"`
 	AvailableSlots int     `json:"available_slots"`
+	PricePerHour   float64 `json:"price_per_hour"`
 	Description    string  `json:"description"`
+	OpenTime       string  `json:"open_time"`
+	CloseTime      string  `json:"close_time"`
+	ImageUrl       string  `json:"image_url"`
+	IsActive       bool    `json:"is_active"`
+	IsVerified     bool    `json:"is_verified"`
 }
 
 type ParkingSlotInfo struct {
