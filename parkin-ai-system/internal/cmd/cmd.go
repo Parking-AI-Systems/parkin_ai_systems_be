@@ -5,12 +5,14 @@ import (
 	"parkin-ai-system/internal/config"
 	"parkin-ai-system/internal/controller/parking_lot"
 	"parkin-ai-system/internal/controller/parking_lot_review"
+	"parkin-ai-system/internal/controller/other_service"
 	"parkin-ai-system/internal/controller/user"
 	"parkin-ai-system/internal/controller/vehicles"
 	"parkin-ai-system/internal/middleware"
 
 	_ "parkin-ai-system/internal/logic/parking_lot"
 	_ "parkin-ai-system/internal/logic/parking_lot_review"
+	_ "parkin-ai-system/internal/logic/other_service"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -33,6 +35,7 @@ var (
 					   vehiclesCtrl := &vehicles.ControllerVehicles{}
 					   parkingLotCtrl := parking_lot.NewParkingLot()
 					   parkingLotReviewCtrl := parking_lot_review.NewParkingLotReview()
+					   otherServiceCtrl := other_service.NewOtherService()
 
 			s := g.Server()
 
@@ -71,6 +74,13 @@ var (
 				       authGroup.GET("/parking-lot-reviews/{id}", parkingLotReviewCtrl.ParkingLotReviewDetail)
 				       authGroup.PUT("/parking-lot-reviews/{id}", parkingLotReviewCtrl.ParkingLotReviewUpdate)
 				       authGroup.DELETE("/parking-lot-reviews/{id}", parkingLotReviewCtrl.ParkingLotReviewDelete)
+
+				       // Other Service CRUD
+				       authGroup.POST("/other-services", otherServiceCtrl.OtherServiceAdd)
+				       authGroup.GET("/other-services", otherServiceCtrl.OtherServiceList)
+				       authGroup.GET("/other-services/{id}", otherServiceCtrl.OtherServiceDetail)
+				       authGroup.PUT("/other-services/{id}", otherServiceCtrl.OtherServiceUpdate)
+				       authGroup.DELETE("/other-services/{id}", otherServiceCtrl.OtherServiceDelete)
 			       })
 
 				group.Group("/", func(userGroup *ghttp.RouterGroup) {

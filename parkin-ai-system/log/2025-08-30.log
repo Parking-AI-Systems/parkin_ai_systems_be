@@ -1,0 +1,1 @@
+{"Time":"2025-08-30 11:49:14","TraceId":"dc24ba3f2472601881ba621325fdf5e3","Level":"INFO","CallerPath":"user_user_user_login.go:15:","CallerFunc":"[parkin-ai-system/internal/controller/user.(*ControllerUser).UserLogin]","Content":"----------------"}
