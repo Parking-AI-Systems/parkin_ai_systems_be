@@ -6,6 +6,7 @@ import (
 	"parkin-ai-system/internal/controller/parking_lot"
 	"parkin-ai-system/internal/controller/parking_lot_review"
 	"parkin-ai-system/internal/controller/other_service"
+	"parkin-ai-system/internal/controller/favourite"
 	"parkin-ai-system/internal/controller/user"
 	"parkin-ai-system/internal/controller/vehicles"
 	"parkin-ai-system/internal/middleware"
@@ -13,6 +14,7 @@ import (
 	_ "parkin-ai-system/internal/logic/parking_lot"
 	_ "parkin-ai-system/internal/logic/parking_lot_review"
 	_ "parkin-ai-system/internal/logic/other_service"
+	_ "parkin-ai-system/internal/logic/favourite"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -36,6 +38,7 @@ var (
 					   parkingLotCtrl := parking_lot.NewParkingLot()
 					   parkingLotReviewCtrl := parking_lot_review.NewParkingLotReview()
 					   otherServiceCtrl := other_service.NewOtherService()
+					   favouriteCtrl := favourite.NewFavourite()
 
 			s := g.Server()
 
@@ -81,6 +84,12 @@ var (
 				       authGroup.GET("/other-services/{id}", otherServiceCtrl.OtherServiceDetail)
 				       authGroup.PUT("/other-services/{id}", otherServiceCtrl.OtherServiceUpdate)
 				       authGroup.DELETE("/other-services/{id}", otherServiceCtrl.OtherServiceDelete)
+
+				       // Favourite CRUD
+				       authGroup.POST("/favourites", favouriteCtrl.FavouriteAdd)
+				       authGroup.GET("/favourites", favouriteCtrl.FavouriteList)
+				       authGroup.GET("/favourites/{lot_id}/status", favouriteCtrl.FavouriteStatus)
+				       authGroup.DELETE("/favourites/{lot_id}", favouriteCtrl.FavouriteDelete)
 			       })
 
 				group.Group("/", func(userGroup *ghttp.RouterGroup) {
