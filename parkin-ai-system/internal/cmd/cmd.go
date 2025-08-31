@@ -8,6 +8,7 @@ import (
 	"parkin-ai-system/internal/controller/other_service"
 	"parkin-ai-system/internal/controller/favourite"
 	"parkin-ai-system/internal/controller/parking_slot"
+	"parkin-ai-system/internal/controller/parking_order"
 	"parkin-ai-system/internal/controller/user"
 	"parkin-ai-system/internal/controller/vehicles"
 	"parkin-ai-system/internal/middleware"
@@ -17,6 +18,7 @@ import (
 	_ "parkin-ai-system/internal/logic/other_service"
 	_ "parkin-ai-system/internal/logic/favourite"
 	_ "parkin-ai-system/internal/logic/parking_slot"
+	_ "parkin-ai-system/internal/logic/parking_order"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -42,6 +44,7 @@ var (
 					   otherServiceCtrl := other_service.NewOtherService()
 					   favouriteCtrl := favourite.NewFavourite()
 					   parkingSlotCtrl := parking_slot.NewParkingSlot()
+					   parkingOrderCtrl := parking_order.NewParkingOrder()
 
 			s := g.Server()
 
@@ -99,6 +102,12 @@ var (
 									   authGroup.GET("/parking-slots", parkingSlotCtrl.ParkingSlotList)
 									   authGroup.PUT("/parking-slots/{id}", parkingSlotCtrl.ParkingSlotUpdate)
 									   authGroup.DELETE("/parking-slots/{id}", parkingSlotCtrl.ParkingSlotDelete)
+
+									   // Parking Order CRUD
+									   authGroup.POST("/parking-orders", parkingOrderCtrl.ParkingOrderAdd)
+									   authGroup.GET("/parking-orders", parkingOrderCtrl.ParkingOrderList)
+									   authGroup.PUT("/parking-orders/{id}", parkingOrderCtrl.ParkingOrderUpdate)
+									   authGroup.DELETE("/parking-orders/{id}", parkingOrderCtrl.ParkingOrderDelete)
 			       })
 
 				group.Group("/", func(userGroup *ghttp.RouterGroup) {
