@@ -11,7 +11,6 @@ import (
 //
 type ParkingOrderAddReq struct {
 	g.Meta      `path:"/parking-orders" method:"post" tags:"ParkingOrder" summary:"Add Parking Order"`
-	UserId      int64  `json:"user_id" description:"User ID"`
 	SlotId      int64  `json:"slot_id" description:"Slot ID"`
 	LotId       int64  `json:"lot_id" description:"Lot ID"`
 	StartTime   string `json:"start_time" description:"Start time"`

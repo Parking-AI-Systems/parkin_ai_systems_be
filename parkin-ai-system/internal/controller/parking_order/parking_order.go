@@ -13,7 +13,8 @@ func NewParkingOrder() *ControllerParkingOrder {
 }
 
 func (c *ControllerParkingOrder) ParkingOrderAdd(ctx context.Context, req *parking_order.ParkingOrderAddReq) (res *parking_order.ParkingOrderAddRes, err error) {
-	return service.ParkingOrder().ParkingOrderAdd(req)
+	userId := g.RequestFromCtx(ctx).GetCtxVar("user_id").Int64()
+	return service.ParkingOrder().ParkingOrderAddWithUser(ctx, req, userId)
 }
 
 func (c *ControllerParkingOrder) ParkingOrderList(ctx context.Context, req *parking_order.ParkingOrderListReq) (res *parking_order.ParkingOrderListRes, err error) {

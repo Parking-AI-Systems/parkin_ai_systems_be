@@ -17,14 +17,15 @@ func init() {
 	service.RegisterParkingOrder(&sParkingOrder{})
 }
 
-func (s *sParkingOrder) ParkingOrderAdd(req *parking_order.ParkingOrderAddReq) (*parking_order.ParkingOrderAddRes, error) {
-	data := do.ParkingOrders{}
-	gconv.Struct(req, &data)
-	lastId, err := dao.ParkingOrders.Ctx(context.Background()).Data(data).InsertAndGetId()
-	if err != nil {
-		return nil, err
-	}
-	return &parking_order.ParkingOrderAddRes{Id: gconv.Int64(lastId)}, nil
+func (s *sParkingOrder) ParkingOrderAddWithUser(ctx context.Context, req *parking_order.ParkingOrderAddReq, userId int64) (*parking_order.ParkingOrderAddRes, error) {
+       data := do.ParkingOrders{}
+       gconv.Struct(req, &data)
+       data.UserId = userId
+       lastId, err := dao.ParkingOrders.Ctx(ctx).Data(data).InsertAndGetId()
+       if err != nil {
+	       return nil, err
+       }
+       return &parking_order.ParkingOrderAddRes{Id: gconv.Int64(lastId)}, nil
 }
 
 func (s *sParkingOrder) ParkingOrderList(req *parking_order.ParkingOrderListReq) (*parking_order.ParkingOrderListRes, error) {
