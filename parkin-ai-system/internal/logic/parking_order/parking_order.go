@@ -7,7 +7,7 @@ import (
 	"parkin-ai-system/internal/model/do"
 	"parkin-ai-system/internal/model/entity"
 	"github.com/gogf/gf/v2/util/gconv"
-	"time"
+	"github.com/gogf/gf/v2/os/gtime"
 	"parkin-ai-system/internal/service"
 )
 
