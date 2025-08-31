@@ -55,14 +55,14 @@ func (s *sParkingOrder) ParkingOrderList(req *parking_order.ParkingOrderListReq)
 }
 
 func (s *sParkingOrder) ParkingOrderUpdate(req *parking_order.ParkingOrderUpdateReq) (*parking_order.ParkingOrderUpdateRes, error) {
-	data := do.ParkingOrders{}
-	gconv.Struct(req, &data)
-	data.UpdatedAt = time.Now()
-	_, err := dao.ParkingOrders.Ctx(context.Background()).Where("id", req.Id).Data(data).Update()
-	if err != nil {
-		return nil, err
-	}
-	return &parking_order.ParkingOrderUpdateRes{Success: true}, nil
+       data := do.ParkingOrders{}
+       gconv.Struct(req, &data)
+       data.UpdatedAt = gtime.Now()
+       _, err := dao.ParkingOrders.Ctx(context.Background()).Where("id", req.Id).Data(data).Update()
+       if err != nil {
+	       return nil, err
+       }
+       return &parking_order.ParkingOrderUpdateRes{Success: true}, nil
 }
 
 func (s *sParkingOrder) ParkingOrderDelete(req *parking_order.ParkingOrderDeleteReq) (*parking_order.ParkingOrderDeleteRes, error) {
