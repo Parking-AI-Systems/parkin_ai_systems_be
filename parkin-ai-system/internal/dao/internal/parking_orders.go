@@ -32,6 +32,7 @@ type ParkingOrdersColumns struct {
 	PaymentStatus string //
 	CreatedAt     string //
 	UpdatedAt     string //
+	VehicleId     string //
 }
 
 // parkingOrdersColumns holds the columns for the table parking_orders.
@@ -47,6 +48,7 @@ var parkingOrdersColumns = ParkingOrdersColumns{
 	PaymentStatus: "payment_status",
 	CreatedAt:     "created_at",
 	UpdatedAt:     "updated_at",
+	VehicleId:     "vehicle_id",
 }
 
 // NewParkingOrdersDao creates and returns a new DAO object for table data access.
