@@ -8,6 +8,7 @@ import (
 	"parkin-ai-system/internal/controller/other_service"
 	"parkin-ai-system/internal/controller/other_service_order"
 	"parkin-ai-system/internal/controller/notification"
+	"parkin-ai-system/internal/controller/wallet_transaction"
 	"parkin-ai-system/internal/controller/favourite"
 	"parkin-ai-system/internal/controller/parking_slot"
 	"parkin-ai-system/internal/controller/parking_order"
@@ -20,6 +21,7 @@ import (
 	_ "parkin-ai-system/internal/logic/other_service"
 	_ "parkin-ai-system/internal/logic/other_service_order"
 	_ "parkin-ai-system/internal/logic/notification"
+	_ "parkin-ai-system/internal/logic/wallet_transaction"
 	_ "parkin-ai-system/internal/logic/favourite"
 	_ "parkin-ai-system/internal/logic/parking_slot"
 	_ "parkin-ai-system/internal/logic/parking_order"
@@ -48,6 +50,7 @@ var (
 					   otherServiceCtrl := other_service.NewOtherService()
 					   otherServiceOrderCtrl := other_service_order.NewOtherServiceOrder()
 					   notificationCtrl := notification.NewNotification()
+					   walletTransactionCtrl := wallet_transaction.NewWalletTransaction()
 					   favouriteCtrl := favourite.NewFavourite()
 					   parkingSlotCtrl := parking_slot.NewParkingSlot()
 					   parkingOrderCtrl := parking_order.NewParkingOrder()
@@ -108,6 +111,10 @@ var (
 									   authGroup.GET("/notifications", notificationCtrl.NotificationList)
 									   authGroup.PUT("/notifications/{id}", notificationCtrl.NotificationUpdate)
 									   authGroup.DELETE("/notifications/{id}", notificationCtrl.NotificationDelete)
+
+									   // Wallet Transaction CRUD
+									   authGroup.POST("/wallet-transactions", walletTransactionCtrl.WalletTransactionAdd)
+									   authGroup.GET("/wallet-transactions", walletTransactionCtrl.WalletTransactionList)
 				       // Favourite CRUD
 				       authGroup.POST("/favourites", favouriteCtrl.FavouriteAdd)
 				       authGroup.GET("/favourites", favouriteCtrl.FavouriteList)
