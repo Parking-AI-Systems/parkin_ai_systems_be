@@ -8,6 +8,7 @@ import (
 	"parkin-ai-system/internal/model/entity"
 	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/gogf/gf/v2/frame/g"
 	"parkin-ai-system/internal/service"
 )
 
