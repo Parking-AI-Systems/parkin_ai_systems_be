@@ -7,6 +7,7 @@ import (
 	"parkin-ai-system/internal/controller/parking_lot_review"
 	"parkin-ai-system/internal/controller/other_service"
 	"parkin-ai-system/internal/controller/other_service_order"
+	"parkin-ai-system/internal/controller/notification"
 	"parkin-ai-system/internal/controller/favourite"
 	"parkin-ai-system/internal/controller/parking_slot"
 	"parkin-ai-system/internal/controller/parking_order"
@@ -18,6 +19,7 @@ import (
 	_ "parkin-ai-system/internal/logic/parking_lot_review"
 	_ "parkin-ai-system/internal/logic/other_service"
 	_ "parkin-ai-system/internal/logic/other_service_order"
+	_ "parkin-ai-system/internal/logic/notification"
 	_ "parkin-ai-system/internal/logic/favourite"
 	_ "parkin-ai-system/internal/logic/parking_slot"
 	_ "parkin-ai-system/internal/logic/parking_order"
@@ -45,6 +47,7 @@ var (
 					   parkingLotReviewCtrl := parking_lot_review.NewParkingLotReview()
 					   otherServiceCtrl := other_service.NewOtherService()
 					   otherServiceOrderCtrl := other_service_order.NewOtherServiceOrder()
+					   notificationCtrl := notification.NewNotification()
 					   favouriteCtrl := favourite.NewFavourite()
 					   parkingSlotCtrl := parking_slot.NewParkingSlot()
 					   parkingOrderCtrl := parking_order.NewParkingOrder()
@@ -99,6 +102,12 @@ var (
 									   authGroup.GET("/other-service-orders", otherServiceOrderCtrl.OtherServiceOrderList)
 									   authGroup.PUT("/other-service-orders/{id}", otherServiceOrderCtrl.OtherServiceOrderUpdate)
 									   authGroup.DELETE("/other-service-orders/{id}", otherServiceOrderCtrl.OtherServiceOrderDelete)
+
+									   // Notification CRUD
+									   authGroup.POST("/notifications", notificationCtrl.NotificationAdd)
+									   authGroup.GET("/notifications", notificationCtrl.NotificationList)
+									   authGroup.PUT("/notifications/{id}", notificationCtrl.NotificationUpdate)
+									   authGroup.DELETE("/notifications/{id}", notificationCtrl.NotificationDelete)
 				       // Favourite CRUD
 				       authGroup.POST("/favourites", favouriteCtrl.FavouriteAdd)
 				       authGroup.GET("/favourites", favouriteCtrl.FavouriteList)
