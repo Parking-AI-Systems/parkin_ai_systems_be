@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"parkin-ai-system/api/other_service_order"
 )
 
