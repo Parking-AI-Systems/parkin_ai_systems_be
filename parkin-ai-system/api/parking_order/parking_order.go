@@ -8,16 +8,16 @@ import (
 // swagger:parameters ParkingOrderAddReq
 // in: body
 // required: true
-//
 type ParkingOrderAddReq struct {
-	g.Meta      `path:"/parking-orders" method:"post" tags:"ParkingOrder" summary:"Add Parking Order"`
-	SlotId      int64  `json:"slot_id" description:"Slot ID"`
-	LotId       int64  `json:"lot_id" description:"Lot ID"`
-	StartTime   string `json:"start_time" description:"Start time"`
-	EndTime     string `json:"end_time" description:"End time"`
-	Status      string `json:"status" description:"Status"`
-	Price       float64 `json:"price" description:"Price"`
-	PaymentStatus string `json:"payment_status" description:"Payment status"`
+	g.Meta        `path:"/parking-orders" method:"post" tags:"ParkingOrder" summary:"Add Parking Order"`
+	SlotId        int64   `json:"slot_id" description:"Slot ID"`
+	LotId         int64   `json:"lot_id" description:"Lot ID"`
+	VehicleId     int64   `json:"vehicle_id" description:"Vehicle ID"`
+	StartTime     string  `json:"start_time" description:"Start time"`
+	EndTime       string  `json:"end_time" description:"End time"`
+	Status        string  `json:"status" description:"Status"`
+	Price         float64 `json:"price" description:"Price"`
+	PaymentStatus string  `json:"payment_status" description:"Payment status"`
 }
 
 type ParkingOrderAddRes struct {
@@ -28,7 +28,6 @@ type ParkingOrderAddRes struct {
 // swagger:parameters ParkingOrderListReq
 // in: query
 // required: false
-//
 type ParkingOrderListReq struct {
 	g.Meta `path:"/parking-orders" method:"get" tags:"ParkingOrder" summary:"List Parking Orders"`
 	UserId int64 `json:"user_id" description:"User ID"`
@@ -57,14 +56,13 @@ type ParkingOrderItem struct {
 // swagger:parameters ParkingOrderUpdateReq
 // in: body
 // required: true
-//
 type ParkingOrderUpdateReq struct {
-	g.Meta      `path:"/parking-orders/{id}" method:"put" tags:"ParkingOrder" summary:"Update Parking Order"`
-	Id          int64   `json:"id" description:"Order ID"`
-	Status      string  `json:"status" description:"Status"`
-	EndTime     string  `json:"end_time" description:"End time"`
-	Price       float64 `json:"price" description:"Price"`
-	PaymentStatus string `json:"payment_status" description:"Payment status"`
+	g.Meta        `path:"/parking-orders/{id}" method:"put" tags:"ParkingOrder" summary:"Update Parking Order"`
+	Id            int64   `json:"id" description:"Order ID"`
+	Status        string  `json:"status" description:"Status"`
+	EndTime       string  `json:"end_time" description:"End time"`
+	Price         float64 `json:"price" description:"Price"`
+	PaymentStatus string  `json:"payment_status" description:"Payment status"`
 }
 
 type ParkingOrderUpdateRes struct {
@@ -75,7 +73,6 @@ type ParkingOrderUpdateRes struct {
 // swagger:parameters ParkingOrderDeleteReq
 // in: path
 // required: true
-//
 type ParkingOrderDeleteReq struct {
 	g.Meta `path:"/parking-orders/{id}" method:"delete" tags:"ParkingOrder" summary:"Delete Parking Order"`
 	Id     int64 `json:"id" description:"Order ID"`

@@ -5,8 +5,9 @@ import (
 	"parkin-ai-system/api/vehicles"
 	"parkin-ai-system/internal/dao"
 	"parkin-ai-system/internal/model/do"
-	"github.com/gogf/gf/v2/util/gconv"
+
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/util/gconv"
 )
 
 type sVehicles struct{}
@@ -18,8 +19,6 @@ var (
 func Vehicles() *sVehicles {
 	return &vehiclesService
 }
-
-
 
 func (s *sVehicles) Create(ctx context.Context, req *vehicles.CreateVehicleReq) (*vehicles.CreateVehicleRes, error) {
 	data := do.Vehicles{}

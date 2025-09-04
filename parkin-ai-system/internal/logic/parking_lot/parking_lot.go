@@ -8,6 +8,7 @@ import (
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/guid"
 
+	"parkin-ai-system/internal/consts"
 	"parkin-ai-system/internal/dao"
 	"parkin-ai-system/internal/model/do"
 	"parkin-ai-system/internal/service"
@@ -73,19 +74,20 @@ func (s *sParkingLot) ParkingLotDelete(ctx context.Context, req *api_delete.Park
 func (s *sParkingLot) ParkingLotAdd(ctx context.Context, req *api_add.ParkingLotAddReq) (res *api_add.ParkingLotAddRes, err error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	userRole := g.RequestFromCtx(ctx).GetCtxVar("user_role").String()
-	if userID == "" {
-		return nil, gerror.New("Unauthorized")
+	user, _ := dao.Users.Ctx(ctx).Where("id", userID).One()
+	if user.IsEmpty() {
+		return nil, gerror.NewCode(consts.CodeUserNotFound)
 	}
 	if userRole != "role_admin" {
-		return nil, gerror.New("Not admin")
+		return nil, gerror.NewCode(consts.CodeNotAdmin)
 	}
 
 	exists, err := dao.ParkingLots.Ctx(ctx).Where("latitude = ? AND longitude = ?", req.Latitude, req.Longitude).Count()
 	if err != nil {
-		return nil, gerror.New("Database error")
+		return nil, gerror.NewCode(consts.CodeDatabaseError)
 	}
 	if exists > 0 {
-		return nil, gerror.New("Location already exists")
+		return nil, gerror.NewCode(consts.CodeLocationExists)
 	}
 
 	// Lấy owner_id từ token

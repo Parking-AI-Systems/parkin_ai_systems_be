@@ -4,7 +4,6 @@ import (
 	"context"
 	"parkin-ai-system/api/parking_order"
 	"parkin-ai-system/internal/service"
-	"github.com/gogf/gf/v2/frame/g"
 )
 
 type ControllerParkingOrder struct{}
@@ -14,8 +13,7 @@ func NewParkingOrder() *ControllerParkingOrder {
 }
 
 func (c *ControllerParkingOrder) ParkingOrderAdd(ctx context.Context, req *parking_order.ParkingOrderAddReq) (res *parking_order.ParkingOrderAddRes, err error) {
-	userId := g.RequestFromCtx(ctx).GetCtxVar("user_id").Int64()
-	return service.ParkingOrder().ParkingOrderAddWithUser(ctx, req, userId)
+	return service.ParkingOrder().ParkingOrderAddWithUser(ctx, req)
 }
 
 func (c *ControllerParkingOrder) ParkingOrderList(ctx context.Context, req *parking_order.ParkingOrderListReq) (res *parking_order.ParkingOrderListRes, err error) {

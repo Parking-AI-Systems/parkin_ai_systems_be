@@ -40,6 +40,8 @@ var (
 	CodeFailedToUpdate   = customCode{code: 903, message: "Failed to update", detail: nil, httpStatus: http.StatusInternalServerError}
 	CodeFailedToDelete   = customCode{code: 904, message: "Failed to delete", detail: nil, httpStatus: http.StatusInternalServerError}
 	CodeCannotDeleteSelf = customCode{code: 905, message: "Cannot delete yourself", detail: nil, httpStatus: http.StatusBadRequest}
+
+	CodeParkingSlotNotFound = customCode{code: 1001, message: "Parking slot not found", detail: nil, httpStatus: http.StatusNotFound}
 )
 
 type customCode struct {
