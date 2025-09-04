@@ -29,6 +29,9 @@ func (s *sParkingOrder) ParkingOrderAdd(req *parking_order.ParkingOrderAddReq) (
 }
 func (s *sParkingOrder) ParkingOrderAddWithUser(ctx context.Context, req *parking_order.ParkingOrderAddReq) (*parking_order.ParkingOrderAddRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	if userID == "" {
+		return nil, gerror.NewCode(consts.CodeUnauthorized)
+	}
 	user, _ := dao.Users.Ctx(ctx).Where("id", userID).One()
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound)
@@ -45,12 +48,37 @@ func (s *sParkingOrder) ParkingOrderAddWithUser(ctx context.Context, req *parkin
 	if slot.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeParkingSlotNotFound)
 	}
+	if req.StartTime == "" || req.EndTime == "" {
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Start time and end time are required")
+	}
+	startTime, err := gtime.StrToTime(req.StartTime)
+	if err != nil {
+		return nil, gerror.New("Invalid start time format")
+	}
+	endTime, err := gtime.StrToTime(req.EndTime)
+	if err != nil {
+		return nil, gerror.New("Invalid end time format")
+	}
+	if startTime.After(endTime) {
+		return nil, gerror.New("Start time must be before end time")
+	}
+	if startTime.Before(gtime.Now()) {
+		return nil, gerror.New("Start time must be in the future")
+	}
+
 	data := do.ParkingOrders{}
 	gconv.Struct(req, &data)
 	data.UserId = userID
+	data.LotId = req.LotId
+	data.SlotId = req.SlotId
+	data.VehicleId = req.VehicleId
+	data.StartTime = startTime
+	data.EndTime = endTime
+	data.CreatedAt = gtime.Now()
+
 	lastId, err := dao.ParkingOrders.Ctx(ctx).Data(data).InsertAndGetId()
 	if err != nil {
-		return nil, err
+		return nil, gerror.NewCode(consts.CodeDatabaseError)
 	}
 	return &parking_order.ParkingOrderAddRes{Id: gconv.Int64(lastId)}, nil
 }
