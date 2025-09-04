@@ -31,20 +31,20 @@ func init() {
 
 func (s *sUser) SignUp(ctx context.Context, req *user.RegisterReq) (res *user.RegisterRes, err error) {
 	if req.Email == "" || req.Password == "" || req.Username == "" || req.Phone == "" {
-		return nil, gerror.New("Invalid input")
+		return nil, gerror.NewCode(consts.CodeInvalidInput)
 	}
 
 	count, err := dao.Users.Ctx(ctx).Where("email", req.Email).Count()
 	if err != nil {
-		return nil, gerror.New("Database error")
+		return nil, gerror.NewCode(consts.CodeDatabaseError)
 	}
 	if count > 0 {
-		return nil, gerror.New("Email already exists")
+		return nil, gerror.NewCode(consts.CodeEmailExists)
 	}
 
 	hashedPwd, err := s.HashPassword(req.Password)
 	if err != nil {
-		return nil, gerror.New("Failed to hash password")
+		return nil, gerror.NewCode(consts.CodeHashPasswordFailed)
 	}
 
 	userId, err := dao.Users.Ctx(ctx).Data(g.Map{
@@ -58,7 +58,7 @@ func (s *sUser) SignUp(ctx context.Context, req *user.RegisterReq) (res *user.Re
 		"role":          consts.RoleUser,
 	}).InsertAndGetId()
 	if err != nil {
-		return nil, gerror.New("Failed to create user")
+		return nil, gerror.NewCode(consts.CodeFailedToCreate)
 	}
 	res = &user.RegisterRes{
 		UserID:    fmt.Sprintf("%d", userId),
@@ -74,21 +74,21 @@ func (s *sUser) SignUp(ctx context.Context, req *user.RegisterReq) (res *user.Re
 
 func (s *sUser) Login(ctx context.Context, req *user.UserLoginReq) (res *user.UserLoginRes, err error) {
 	if req.Account == "" || req.Password == "" {
-		return nil, gerror.New("Invalid input")
+		return nil, gerror.NewCode(consts.CodeInvalidInput)
 	}
 
 	userRecord, err := dao.Users.Ctx(ctx).Where("email", req.Account).One()
 	if err != nil {
-		return nil, gerror.New("Database error")
+		return nil, gerror.NewCode(consts.CodeDatabaseError)
 	}
 	fmt.Println(userRecord)
 	if userRecord.IsEmpty() {
-		return nil, gerror.New("User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound)
 	}
 
 	password := userRecord["password_hash"].String()
 	if err := bcrypt.CompareHashAndPassword([]byte(password), []byte(req.Password)); err != nil {
-		return nil, gerror.New("Invalid password")
+		return nil, gerror.NewCode(consts.CodeIncorrectPassword)
 	}
 
 	userId := userRecord["id"].Int64()
@@ -102,7 +102,7 @@ func (s *sUser) Login(ctx context.Context, req *user.UserLoginReq) (res *user.Us
 		"is_active":   true,
 	}).Insert()
 	if err != nil {
-		return nil, gerror.New("Failed to save refresh token")
+		return nil, gerror.NewCode(consts.CodeFailedToCreate)
 	}
 
 	accessToken := &service.AccessToken{
@@ -113,7 +113,7 @@ func (s *sUser) Login(ctx context.Context, req *user.UserLoginReq) (res *user.Us
 
 	accessTokenStr, err := accessToken.Gen()
 	if err != nil {
-		return nil, gerror.New("Failed to generate access token")
+		return nil, gerror.NewCode(consts.CodeFailedToCreate)
 	}
 
 	res = &user.UserLoginRes{
@@ -131,15 +131,15 @@ func (s *sUser) Login(ctx context.Context, req *user.UserLoginReq) (res *user.Us
 
 func (s *sUser) RefreshToken(ctx context.Context, req *user.RefreshTokenReq) (res *user.RefreshTokenRes, err error) {
 	if req.RefreshToken == "" {
-		return nil, gerror.New("Refresh token is required")
+		return nil, gerror.NewCode(consts.CodeInvalidInput)
 	}
 
 	tokenRecord, err := dao.ApiTokens.Ctx(ctx).Where("token", req.RefreshToken).Where("is_active", true).One()
 	if err != nil {
-		return nil, gerror.New("Database error")
+		return nil, gerror.NewCode(consts.CodeDatabaseError)
 	}
 	if tokenRecord.IsEmpty() {
-		return nil, gerror.New("Invalid or expired refresh token")
+		return nil, gerror.NewCode(consts.CodeInvalidToken)
 	}
 
 	userId := tokenRecord["user_id"].Int64()
@@ -152,7 +152,7 @@ func (s *sUser) RefreshToken(ctx context.Context, req *user.RefreshTokenReq) (re
 
 	accessTokenStr, err := accessToken.Gen()
 	if err != nil {
-		return nil, gerror.New("Failed to generate access token")
+		return nil, gerror.NewCode(consts.CodeFailedToCreate)
 	}
 
 	newRefreshTokenStr := guid.S()
@@ -161,7 +161,7 @@ func (s *sUser) RefreshToken(ctx context.Context, req *user.RefreshTokenReq) (re
 		"is_active": false,
 	}).Update()
 	if err != nil {
-		return nil, gerror.New("Failed to update old token")
+		return nil, gerror.NewCode(consts.CodeFailedToUpdate)
 	}
 
 	_, err = dao.ApiTokens.Ctx(ctx).Data(g.Map{
@@ -171,7 +171,7 @@ func (s *sUser) RefreshToken(ctx context.Context, req *user.RefreshTokenReq) (re
 		"is_active":   true,
 	}).Insert()
 	if err != nil {
-		return nil, gerror.New("Failed to save new refresh token")
+		return nil, gerror.NewCode(consts.CodeFailedToCreate)
 	}
 
 	res = &user.RefreshTokenRes{
@@ -226,15 +226,15 @@ func (s *sUser) UserProfile(ctx context.Context, req *user.UserProfileReq) (res 
 		userIDStr = v.String()
 	}
 	if userIDStr == "" {
-		return nil, gerror.New("Unauthorized: user_id missing in context")
+		return nil, gerror.NewCode(consts.CodeUnauthorized)
 	}
 
 	userRecord, err := dao.Users.Ctx(ctx).Where("id", userIDStr).One()
 	if err != nil {
-		return nil, gerror.New("Database error")
+		return nil, gerror.NewCode(consts.CodeDatabaseError)
 	}
 	if userRecord.IsEmpty() {
-		return nil, gerror.New("User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound)
 	}
 
 	res = &user.UserProfileRes{
@@ -252,10 +252,10 @@ func (s *sUser) UserProfile(ctx context.Context, req *user.UserProfileReq) (res 
 func (s *sUser) UserById(ctx context.Context, req *user.UserByIdReq) (res *user.UserByIdRes, err error) {
 	userRecord, err := dao.Users.Ctx(ctx).Where("id", req.Id).One()
 	if err != nil {
-		return nil, gerror.New("Database error")
+		return nil, gerror.NewCode(consts.CodeDatabaseError)
 	}
 	if userRecord.IsEmpty() {
-		return nil, gerror.New("User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound)
 	}
 	res = &user.UserByIdRes{
 		UserID:    userRecord["id"].Int64(),
@@ -275,7 +275,7 @@ func (s *sUser) UserUpdateProfile(ctx context.Context, req *user.UserUpdateProfi
 		userIDStr = v.String()
 	}
 	if userIDStr == "" {
-		return nil, gerror.New("Unauthorized: user_id missing in context")
+		return nil, gerror.NewCode(consts.CodeUnauthorized)
 	}
 
 	_, err = dao.Users.Ctx(ctx).Where("id", userIDStr).Data(g.Map{
@@ -285,7 +285,7 @@ func (s *sUser) UserUpdateProfile(ctx context.Context, req *user.UserUpdateProfi
 		"birth_date": req.BirthDate,
 	}).Update()
 	if err != nil {
-		return nil, gerror.New("Failed to update user profile")
+		return nil, gerror.NewCode(consts.CodeFailedToUpdate)
 	}
 
 	res = &user.UserUpdateProfileRes{
@@ -299,7 +299,7 @@ func (s *sUser) GetAllUsers(ctx context.Context, req *user.GetAllUsersReq) (res 
 	offset := (req.Page - 1) * req.Size
 	total, err := dao.Users.Ctx(ctx).Count()
 	if err != nil {
-		return nil, err
+		return nil, gerror.NewCode(consts.CodeDatabaseError)
 	}
 	users, err := dao.Users.Ctx(ctx).
 		Fields("id", "username", "email", "phone", "full_name", "role", "created_at").
@@ -308,7 +308,7 @@ func (s *sUser) GetAllUsers(ctx context.Context, req *user.GetAllUsersReq) (res 
 		Order("created_at DESC").
 		All()
 	if err != nil {
-		return nil, err
+		return nil, gerror.NewCode(consts.CodeDatabaseError)
 	}
 	userList := make([]user.UserInfo, 0, len(users))
 	for _, u := range users {
@@ -337,11 +337,11 @@ func (s *sUser) DeleteUser(ctx context.Context, req *user.DeleteUserReq) (res *u
 		return nil, err
 	}
 	if userRecord.IsEmpty() {
-		return nil, gerror.New("User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound)
 	}
 	currentUserID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if currentUserID == userRecord["id"].String() {
-		return nil, gerror.New("Cannot delete yourself")
+		return nil, gerror.NewCode(consts.CodeCannotDeleteSelf)
 	}
 	_, err = dao.Users.Ctx(ctx).Where("id", req.Id).Delete()
 	if err != nil {
@@ -363,18 +363,18 @@ func (s *sUser) UpdateUserRole(ctx context.Context, req *user.UpdateUserRoleReq)
 		return nil, err
 	}
 	if userRecord.IsEmpty() {
-		return nil, gerror.New("User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound)
 	}
 	currentUserID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if currentUserID == userRecord["id"].String() {
-		return nil, gerror.New("Cannot change your own role")
+		return nil, gerror.NewCode(consts.CodeNotAdmin)
 	}
 	_, err = dao.Users.Ctx(ctx).
 		Where("id", req.Id).
 		Data(g.Map{"role": req.Role}).
 		Update()
 	if err != nil {
-		return nil, err
+		return nil, gerror.NewCode(consts.CodeFailedToUpdate)
 	}
 	_, err = dao.ApiTokens.Ctx(ctx).
 		Where("user_id", req.Id).
@@ -392,7 +392,7 @@ func (s *sUser) UpdateUserRole(ctx context.Context, req *user.UpdateUserRoleReq)
 func (s *sUser) UserUpdateProfileWithRBAC(ctx context.Context, req *user.UserUpdateProfileReq) (res *user.UserUpdateProfileRes, err error) {
 	currentUserID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if !middleware.CheckResourceOwnership(g.RequestFromCtx(ctx), currentUserID) {
-		return nil, gerror.New("Forbidden: You can only update your own profile")
+		return nil, gerror.NewCode(consts.CodeNotOwner)
 	}
 	// ... existing update logic here ...
 	res = &user.UserUpdateProfileRes{
