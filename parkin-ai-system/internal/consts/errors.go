@@ -45,6 +45,7 @@ var (
 	CodeAlreadyFavorited    = customCode{code: 1002, message: "Parking lot already favorited", detail: nil, httpStatus: http.StatusConflict}
 	CodeFavoriteNotFound    = customCode{code: 1003, message: "Favorite not found", detail: nil, httpStatus: http.StatusNotFound}
 	CodeNotFound            = customCode{code: 1004, message: "Not found", detail: nil, httpStatus: http.StatusNotFound}
+	CodeServiceNotFound     = customCode{code: 1101, message: "Service not found", detail: nil, httpStatus: http.StatusNotFound}
 )
 
 type customCode struct {

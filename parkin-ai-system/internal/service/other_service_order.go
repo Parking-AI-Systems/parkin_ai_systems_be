@@ -7,29 +7,32 @@ package service
 
 import (
 	"context"
-	"parkin-ai-system/api/other_service_order"
+	"parkin-ai-system/internal/model/entity"
 )
 
 type (
-	IOtherServiceOrder interface {
-		OtherServiceOrderAdd(ctx context.Context, req *other_service_order.OtherServiceOrderAddReq) (*other_service_order.OtherServiceOrderAddRes, error)
-		OtherServiceOrderUpdate(ctx context.Context, req *other_service_order.OtherServiceOrderUpdateReq) (*other_service_order.OtherServiceOrderUpdateRes, error)
-		OtherServiceOrderDelete(ctx context.Context, req *other_service_order.OtherServiceOrderDeleteReq) (*other_service_order.OtherServiceOrderDeleteRes, error)
-		OtherServiceOrderList(ctx context.Context, req *other_service_order.OtherServiceOrderListReq) (*other_service_order.OtherServiceOrderListRes, error)
+	IOthersServiceOrder interface {
+		OthersServiceOrderAddWithUser(ctx context.Context, req *entity.OthersServiceOrderAddReq) (*entity.OthersServiceOrderAddRes, error)
+		OthersServiceOrderList(ctx context.Context, req *entity.OthersServiceOrderListReq) (*entity.OthersServiceOrderListRes, error)
+		OthersServiceOrderGet(ctx context.Context, req *entity.OthersServiceOrderGetReq) (*entity.OthersServiceOrderItem, error)
+		OthersServiceOrderUpdate(ctx context.Context, req *entity.OthersServiceOrderUpdateReq) (*entity.OthersServiceOrderItem, error)
+		OthersServiceOrderCancel(ctx context.Context, req *entity.OthersServiceOrderCancelReq) (*entity.OthersServiceOrderItem, error)
+		OthersServiceOrderDelete(ctx context.Context, req *entity.OthersServiceOrderDeleteReq) (*entity.OthersServiceOrderDeleteRes, error)
+		OthersServiceOrderPayment(ctx context.Context, req *entity.OthersServiceOrderPaymentReq) (*entity.OthersServiceOrderItem, error)
 	}
 )
 
 var (
-	localOtherServiceOrder IOtherServiceOrder
+	localOthersServiceOrder IOthersServiceOrder
 )
 
-func OtherServiceOrder() IOtherServiceOrder {
-	if localOtherServiceOrder == nil {
-		panic("implement not found for interface IOtherServiceOrder, forgot register?")
+func OthersServiceOrder() IOthersServiceOrder {
+	if localOthersServiceOrder == nil {
+		panic("implement not found for interface IOthersServiceOrder, forgot register?")
 	}
-	return localOtherServiceOrder
+	return localOthersServiceOrder
 }
 
-func RegisterOtherServiceOrder(i IOtherServiceOrder) {
-	localOtherServiceOrder = i
+func RegisterOthersServiceOrder(i IOthersServiceOrder) {
+	localOthersServiceOrder = i
 }
