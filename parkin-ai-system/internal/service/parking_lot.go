@@ -7,20 +7,17 @@ package service
 
 import (
 	"context"
-	api_add "parkin-ai-system/api/parking_lot/parking_lot"
-	api_delete "parkin-ai-system/api/parking_lot/parking_lot"
-	api_detail "parkin-ai-system/api/parking_lot/parking_lot"
-	api_list "parkin-ai-system/api/parking_lot/parking_lot"
-	api_update "parkin-ai-system/api/parking_lot/parking_lot"
+	"parkin-ai-system/internal/model/entity"
 )
 
 type (
 	IParkingLot interface {
-		ParkingLotList(ctx context.Context, req *api_list.ParkingLotListReq) (res *api_list.ParkingLotListRes, err error)
-		ParkingLotUpdate(ctx context.Context, req *api_update.ParkingLotUpdateReq) (res *api_update.ParkingLotUpdateRes, err error)
-		ParkingLotDelete(ctx context.Context, req *api_delete.ParkingLotDeleteReq) (res *api_delete.ParkingLotDeleteRes, err error)
-		ParkingLotAdd(ctx context.Context, req *api_add.ParkingLotAddReq) (res *api_add.ParkingLotAddRes, err error)
-		ParkingLotDetail(ctx context.Context, req *api_detail.ParkingLotDetailReq) (res *api_detail.ParkingLotDetailRes, err error)
+		ParkingLotAdd(ctx context.Context, req *entity.ParkingLotAddReq) (*entity.ParkingLotAddRes, error)
+		ParkingLotList(ctx context.Context, req *entity.ParkingLotListReq) (*entity.ParkingLotListRes, error)
+		ParkingLotGet(ctx context.Context, req *entity.ParkingLotGetReq) (*entity.ParkingLotItem, error)
+		ParkingLotUpdate(ctx context.Context, req *entity.ParkingLotUpdateReq) (*entity.ParkingLotItem, error)
+		ParkingLotDelete(ctx context.Context, req *entity.ParkingLotDeleteReq) (*entity.ParkingLotDeleteRes, error)
+		ParkingLotImageDelete(ctx context.Context, req *entity.ParkingLotImageDeleteReq) (*entity.ParkingLotImageDeleteRes, error)
 	}
 )
 

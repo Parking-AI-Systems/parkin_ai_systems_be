@@ -1,0 +1,34 @@
+package parking_lot
+
+import (
+	"context"
+
+	"parkin-ai-system/api/parking_lot/parking_lot"
+	"parkin-ai-system/internal/model/entity"
+	"parkin-ai-system/internal/service"
+)
+
+func (c *ControllerParking_lot) ParkingLotUpdate(ctx context.Context, req *parking_lot.ParkingLotUpdateReq) (res *parking_lot.ParkingLotUpdateRes, err error) {
+	// Map API request to entity request
+	input := &entity.ParkingLotUpdateReq{
+		Id:           req.Id,
+		Name:         req.Name,
+		Address:      req.Address,
+		Latitude:     req.Latitude,
+		Longitude:    req.Longitude,
+		TotalSlots:   req.TotalSlots,
+		PricePerHour: req.PricePerHour,
+	}
+
+	// Call service
+	updateRes, err := service.ParkingLot().ParkingLotUpdate(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map entity response to API response
+	res = &parking_lot.ParkingLotUpdateRes{
+		Lot: entityToApiParkingLotItem(updateRes),
+	}
+	return res, nil
+}

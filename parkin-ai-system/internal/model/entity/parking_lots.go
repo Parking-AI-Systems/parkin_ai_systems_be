@@ -28,3 +28,97 @@ type ParkingLots struct {
 	CreatedAt      *gtime.Time `json:"createdAt"      orm:"created_at"      description:""`
 	UpdatedAt      *gtime.Time `json:"updatedAt"      orm:"updated_at"      description:""`
 }
+
+type ParkingLotImageInput struct {
+	ImageUrl    string `json:"imageUrl"`
+	Description string `json:"description"`
+}
+
+type ParkingLotAddReq struct {
+	Name         string               `json:"name"`
+	Address      string               `json:"address"`
+	Latitude     float64              `json:"latitude"`
+	Longitude    float64              `json:"longitude"`
+	TotalSlots   int                  `json:"totalSlots"`
+	PricePerHour float64              `json:"pricePerHour"`
+	Images       []ParkingLotImageInput `json:"images"`
+}
+
+type ParkingLotAddRes struct {
+	Id int64 `json:"id"`
+}
+
+type ParkingLotListReq struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Radius    float64 `json:"radius"`
+	Page      int     `json:"page"`
+	PageSize  int     `json:"pageSize"`
+}
+
+type ParkingLotImageItem struct {
+	Id           int64  `json:"id"`
+	ParkingLotId int64  `json:"parking_lot_id"`
+	LotName      string `json:"lot_name"`
+	ImageUrl     string `json:"image_url"`
+	Description  string `json:"description"`
+	CreatedAt    string `json:"created_at"`
+	UpdatedAt    string `json:"updated_at"`
+}
+
+type ParkingLotItem struct {
+	Id            int64                `json:"id"`
+	Name          string               `json:"name"`
+	Address       string               `json:"address"`
+	Latitude      float64              `json:"latitude"`
+	Longitude     float64              `json:"longitude"`
+	TotalSlots    int                  `json:"total_slots"`
+	AvailableSlots int                  `json:"available_slots"`
+	PricePerHour  float64              `json:"price_per_hour"`
+	Images        []ParkingLotImageItem `json:"images"`
+	CreatedAt     string               `json:"created_at"`
+	UpdatedAt     string               `json:"updated_at"`
+}
+
+type ParkingLotListRes struct {
+	List  []ParkingLotItem `json:"list"`
+	Total int              `json:"total"`
+}
+
+type ParkingLotGetReq struct {
+	Id int64 `json:"id"`
+}
+
+type ParkingLotGetRes struct {
+	Lot ParkingLotItem `json:"lot"`
+}
+
+type ParkingLotUpdateReq struct {
+	Id           int64   `json:"id"`
+	Name         string  `json:"name"`
+	Address      string  `json:"address"`
+	Latitude     float64 `json:"latitude"`
+	Longitude    float64 `json:"longitude"`
+	TotalSlots   int     `json:"totalSlots"`
+	PricePerHour float64 `json:"pricePerHour"`
+}
+
+type ParkingLotUpdateRes struct {
+	Lot ParkingLotItem `json:"lot"`
+}
+
+type ParkingLotDeleteReq struct {
+	Id int64 `json:"id"`
+}
+
+type ParkingLotDeleteRes struct {
+	Message string `json:"message"`
+}
+
+type ParkingLotImageDeleteReq struct {
+	Id int64 `json:"id"`
+}
+
+type ParkingLotImageDeleteRes struct {
+	Message string `json:"message"`
+}
