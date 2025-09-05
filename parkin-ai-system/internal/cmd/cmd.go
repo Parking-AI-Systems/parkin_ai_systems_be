@@ -3,28 +3,28 @@ package cmd
 import (
 	"context"
 	"parkin-ai-system/internal/config"
-	"parkin-ai-system/internal/controller/parking_lot"
-	"parkin-ai-system/internal/controller/parking_lot_review"
+	"parkin-ai-system/internal/controller/favourite"
+	"parkin-ai-system/internal/controller/notification"
 	"parkin-ai-system/internal/controller/other_service"
 	"parkin-ai-system/internal/controller/other_service_order"
-	"parkin-ai-system/internal/controller/notification"
-	"parkin-ai-system/internal/controller/wallet_transaction"
-	"parkin-ai-system/internal/controller/favourite"
-	"parkin-ai-system/internal/controller/parking_slot"
+	"parkin-ai-system/internal/controller/parking_lot"
+	"parkin-ai-system/internal/controller/parking_lot_review"
 	"parkin-ai-system/internal/controller/parking_order"
+	"parkin-ai-system/internal/controller/parking_slot"
 	"parkin-ai-system/internal/controller/user"
 	"parkin-ai-system/internal/controller/vehicles"
+	"parkin-ai-system/internal/controller/wallet_transaction"
 	"parkin-ai-system/internal/middleware"
 
-	_ "parkin-ai-system/internal/logic/parking_lot"
-	_ "parkin-ai-system/internal/logic/parking_lot_review"
+	_ "parkin-ai-system/internal/logic/favourite"
+	_ "parkin-ai-system/internal/logic/notification"
 	_ "parkin-ai-system/internal/logic/other_service"
 	_ "parkin-ai-system/internal/logic/other_service_order"
-	_ "parkin-ai-system/internal/logic/notification"
-	_ "parkin-ai-system/internal/logic/wallet_transaction"
-	_ "parkin-ai-system/internal/logic/favourite"
-	_ "parkin-ai-system/internal/logic/parking_slot"
+	_ "parkin-ai-system/internal/logic/parking_lot"
+	_ "parkin-ai-system/internal/logic/parking_lot_review"
 	_ "parkin-ai-system/internal/logic/parking_order"
+	_ "parkin-ai-system/internal/logic/parking_slot"
+	_ "parkin-ai-system/internal/logic/wallet_transaction"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
@@ -43,17 +43,17 @@ var (
 
 			config.InitConfig(ctx)
 
-					   userCtrl := user.NewUser()
-					   vehiclesCtrl := &vehicles.ControllerVehicles{}
-					   parkingLotCtrl := parking_lot.NewParkingLot()
-					   parkingLotReviewCtrl := parking_lot_review.NewParkingLotReview()
-					   otherServiceCtrl := other_service.NewOtherService()
-					   otherServiceOrderCtrl := other_service_order.NewOtherServiceOrder()
-					   notificationCtrl := notification.NewNotification()
-					   walletTransactionCtrl := wallet_transaction.NewWalletTransaction()
-					   favouriteCtrl := favourite.NewFavourite()
-					   parkingSlotCtrl := parking_slot.NewParkingSlot()
-					   parkingOrderCtrl := parking_order.NewParkingOrder()
+			userCtrl := user.NewUser()
+			vehiclesCtrl := &vehicles.ControllerVehicles{}
+			parkingLotCtrl := parking_lot.NewParkingLot()
+			parkingLotReviewCtrl := parking_lot_review.NewParkingLotReview()
+			otherServiceCtrl := other_service.NewOtherService()
+			otherServiceOrderCtrl := other_service_order.NewOtherServiceOrder()
+			notificationCtrl := notification.NewNotification()
+			walletTransactionCtrl := wallet_transaction.NewWalletTransaction()
+			favouriteCtrl := favourite.NewFavourite()
+			parkingSlotCtrl := parking_slot.NewParkingSlot()
+			parkingOrderCtrl := parking_order.NewParking_order()
 
 			s := g.Server()
 
@@ -69,70 +69,69 @@ var (
 				group.POST("/user/refresh", userCtrl.RefreshToken)
 				group.GET("/parking-lots/{id}", parkingLotCtrl.ParkingLotDetail)
 
-
 				// Protected routes (auth required)
-			       group.Group("/", func(authGroup *ghttp.RouterGroup) {
-				       authGroup.Middleware(middleware.Auth)
-				       // Vehicles CRUD
-				       authGroup.POST("/vehicles", vehiclesCtrl.Create)
-				       authGroup.GET("/vehicles", vehiclesCtrl.List)
-				       authGroup.GET("/vehicles/{id}", vehiclesCtrl.Get)
-				       authGroup.PUT("/vehicles/{id}", vehiclesCtrl.Update)
-				       authGroup.DELETE("/vehicles/{id}", vehiclesCtrl.Delete)
+				group.Group("/", func(authGroup *ghttp.RouterGroup) {
+					authGroup.Middleware(middleware.Auth)
+					// Vehicles CRUD
+					authGroup.POST("/vehicles", vehiclesCtrl.Create)
+					authGroup.GET("/vehicles", vehiclesCtrl.List)
+					authGroup.GET("/vehicles/{id}", vehiclesCtrl.Get)
+					authGroup.PUT("/vehicles/{id}", vehiclesCtrl.Update)
+					authGroup.DELETE("/vehicles/{id}", vehiclesCtrl.Delete)
 
-				       authGroup.GET("/user/profile", userCtrl.UserProfile)
-				       authGroup.POST("/parking-lots", parkingLotCtrl.ParkingLotAdd)
-				       authGroup.GET("/parking-lots", parkingLotCtrl.ParkingLotList)
-				       authGroup.PUT("/parking-lots/{id}", parkingLotCtrl.ParkingLotUpdate)
-				       authGroup.DELETE("/parking-lots/{id}", parkingLotCtrl.ParkingLotDelete)
+					authGroup.GET("/user/profile", userCtrl.UserProfile)
+					authGroup.POST("/parking-lots", parkingLotCtrl.ParkingLotAdd)
+					authGroup.GET("/parking-lots", parkingLotCtrl.ParkingLotList)
+					authGroup.PUT("/parking-lots/{id}", parkingLotCtrl.ParkingLotUpdate)
+					authGroup.DELETE("/parking-lots/{id}", parkingLotCtrl.ParkingLotDelete)
 
-				       // Parking Lot Review CRUD
-				       authGroup.POST("/parking-lot-reviews", parkingLotReviewCtrl.ParkingLotReviewAdd)
-				       authGroup.GET("/parking-lot-reviews", parkingLotReviewCtrl.ParkingLotReviewList)
-				       authGroup.GET("/parking-lot-reviews/{id}", parkingLotReviewCtrl.ParkingLotReviewDetail)
-				       authGroup.PUT("/parking-lot-reviews/{id}", parkingLotReviewCtrl.ParkingLotReviewUpdate)
-				       authGroup.DELETE("/parking-lot-reviews/{id}", parkingLotReviewCtrl.ParkingLotReviewDelete)
+					// Parking Lot Review CRUD
+					authGroup.POST("/parking-lot-reviews", parkingLotReviewCtrl.ParkingLotReviewAdd)
+					authGroup.GET("/parking-lot-reviews", parkingLotReviewCtrl.ParkingLotReviewList)
+					authGroup.GET("/parking-lot-reviews/{id}", parkingLotReviewCtrl.ParkingLotReviewDetail)
+					authGroup.PUT("/parking-lot-reviews/{id}", parkingLotReviewCtrl.ParkingLotReviewUpdate)
+					authGroup.DELETE("/parking-lot-reviews/{id}", parkingLotReviewCtrl.ParkingLotReviewDelete)
 
-				       // Other Service CRUD
-				       authGroup.POST("/other-services", otherServiceCtrl.OtherServiceAdd)
-				       authGroup.GET("/other-services", otherServiceCtrl.OtherServiceList)
-				       authGroup.GET("/other-services/{id}", otherServiceCtrl.OtherServiceDetail)
-				       authGroup.PUT("/other-services/{id}", otherServiceCtrl.OtherServiceUpdate)
-				       authGroup.DELETE("/other-services/{id}", otherServiceCtrl.OtherServiceDelete)
+					// Other Service CRUD
+					authGroup.POST("/other-services", otherServiceCtrl.OtherServiceAdd)
+					authGroup.GET("/other-services", otherServiceCtrl.OtherServiceList)
+					authGroup.GET("/other-services/{id}", otherServiceCtrl.OtherServiceDetail)
+					authGroup.PUT("/other-services/{id}", otherServiceCtrl.OtherServiceUpdate)
+					authGroup.DELETE("/other-services/{id}", otherServiceCtrl.OtherServiceDelete)
 
-									   // Other Service Order CRUD
-									   authGroup.POST("/other-service-orders", otherServiceOrderCtrl.OtherServiceOrderAdd)
-									   authGroup.GET("/other-service-orders", otherServiceOrderCtrl.OtherServiceOrderList)
-									   authGroup.PUT("/other-service-orders/{id}", otherServiceOrderCtrl.OtherServiceOrderUpdate)
-									   authGroup.DELETE("/other-service-orders/{id}", otherServiceOrderCtrl.OtherServiceOrderDelete)
+					// Other Service Order CRUD
+					authGroup.POST("/other-service-orders", otherServiceOrderCtrl.OtherServiceOrderAdd)
+					authGroup.GET("/other-service-orders", otherServiceOrderCtrl.OtherServiceOrderList)
+					authGroup.PUT("/other-service-orders/{id}", otherServiceOrderCtrl.OtherServiceOrderUpdate)
+					authGroup.DELETE("/other-service-orders/{id}", otherServiceOrderCtrl.OtherServiceOrderDelete)
 
-									   // Notification CRUD
-									   authGroup.POST("/notifications", notificationCtrl.NotificationAdd)
-									   authGroup.GET("/notifications", notificationCtrl.NotificationList)
-									   authGroup.PUT("/notifications/{id}", notificationCtrl.NotificationUpdate)
-									   authGroup.DELETE("/notifications/{id}", notificationCtrl.NotificationDelete)
+					// Notification CRUD
+					authGroup.POST("/notifications", notificationCtrl.NotificationAdd)
+					authGroup.GET("/notifications", notificationCtrl.NotificationList)
+					authGroup.PUT("/notifications/{id}", notificationCtrl.NotificationUpdate)
+					authGroup.DELETE("/notifications/{id}", notificationCtrl.NotificationDelete)
 
-									   // Wallet Transaction CRUD
-									   authGroup.POST("/wallet-transactions", walletTransactionCtrl.WalletTransactionAdd)
-									   authGroup.GET("/wallet-transactions", walletTransactionCtrl.WalletTransactionList)
-				       // Favourite CRUD
-				       authGroup.POST("/favourites", favouriteCtrl.FavouriteAdd)
-				       authGroup.GET("/favourites", favouriteCtrl.FavouriteList)
-				       authGroup.GET("/favourites/{lot_id}/status", favouriteCtrl.FavouriteStatus)
-				       authGroup.DELETE("/favourites/{lot_id}", favouriteCtrl.FavouriteDelete)
+					// Wallet Transaction CRUD
+					authGroup.POST("/wallet-transactions", walletTransactionCtrl.WalletTransactionAdd)
+					authGroup.GET("/wallet-transactions", walletTransactionCtrl.WalletTransactionList)
+					// Favourite CRUD
+					authGroup.POST("/favourites", favouriteCtrl.FavouriteAdd)
+					authGroup.GET("/favourites", favouriteCtrl.FavouriteList)
+					authGroup.GET("/favourites/{lot_id}/status", favouriteCtrl.FavouriteStatus)
+					authGroup.DELETE("/favourites/{lot_id}", favouriteCtrl.FavouriteDelete)
 
-									   // Parking Slot CRUD
-									   authGroup.POST("/parking-slots", parkingSlotCtrl.ParkingSlotAdd)
-									   authGroup.GET("/parking-slots", parkingSlotCtrl.ParkingSlotList)
-									   authGroup.PUT("/parking-slots/{id}", parkingSlotCtrl.ParkingSlotUpdate)
-									   authGroup.DELETE("/parking-slots/{id}", parkingSlotCtrl.ParkingSlotDelete)
+					// Parking Slot CRUD
+					authGroup.POST("/parking-slots", parkingSlotCtrl.ParkingSlotAdd)
+					authGroup.GET("/parking-slots", parkingSlotCtrl.ParkingSlotList)
+					authGroup.PUT("/parking-slots/{id}", parkingSlotCtrl.ParkingSlotUpdate)
+					authGroup.DELETE("/parking-slots/{id}", parkingSlotCtrl.ParkingSlotDelete)
 
-									   // Parking Order CRUD
-									   authGroup.POST("/parking-orders", parkingOrderCtrl.ParkingOrderAdd)
-									   authGroup.GET("/parking-orders", parkingOrderCtrl.ParkingOrderList)
-									   authGroup.PUT("/parking-orders/{id}", parkingOrderCtrl.ParkingOrderUpdate)
-									   authGroup.DELETE("/parking-orders/{id}", parkingOrderCtrl.ParkingOrderDelete)
-			       })
+					// Parking Order CRUD
+					authGroup.POST("/parking-orders", parkingOrderCtrl.ParkingOrderAdd)
+					authGroup.GET("/parking-orders", parkingOrderCtrl.ParkingOrderList)
+					authGroup.PUT("/parking-orders/{id}", parkingOrderCtrl.ParkingOrderUpdate)
+					authGroup.DELETE("/parking-orders/{id}", parkingOrderCtrl.ParkingOrderDelete)
+				})
 
 				group.Group("/", func(userGroup *ghttp.RouterGroup) {
 					userGroup.Middleware(middleware.UserOrAdmin)

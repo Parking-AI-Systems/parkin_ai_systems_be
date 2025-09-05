@@ -7,16 +7,18 @@ package service
 
 import (
 	"context"
-	"parkin-ai-system/api/parking_order"
+	"parkin-ai-system/internal/model/entity"
 )
 
 type (
 	IParkingOrder interface {
-		ParkingOrderAdd(req *parking_order.ParkingOrderAddReq) (*parking_order.ParkingOrderAddRes, error)
-		ParkingOrderAddWithUser(ctx context.Context, req *parking_order.ParkingOrderAddReq) (*parking_order.ParkingOrderAddRes, error)
-		ParkingOrderList(req *parking_order.ParkingOrderListReq) (*parking_order.ParkingOrderListRes, error)
-		ParkingOrderUpdate(req *parking_order.ParkingOrderUpdateReq) (*parking_order.ParkingOrderUpdateRes, error)
-		ParkingOrderDelete(req *parking_order.ParkingOrderDeleteReq) (*parking_order.ParkingOrderDeleteRes, error)
+		ParkingOrderAddWithUser(ctx context.Context, req *entity.ParkingOrderAddReq) (*entity.ParkingOrderAddRes, error)
+		ParkingOrderList(ctx context.Context, req *entity.ParkingOrderListReq) (*entity.ParkingOrderListRes, error)
+		ParkingOrderGet(ctx context.Context, req *entity.ParkingOrderGetReq) (*entity.ParkingOrderItem, error)
+		ParkingOrderUpdate(ctx context.Context, req *entity.ParkingOrderUpdateReq) (*entity.ParkingOrderItem, error)
+		ParkingOrderCancel(ctx context.Context, req *entity.ParkingOrderCancelReq) (*entity.ParkingOrderItem, error)
+		ParkingOrderDelete(ctx context.Context, req *entity.ParkingOrderDeleteReq) (*entity.ParkingOrderDeleteRes, error)
+		ParkingOrderPayment(ctx context.Context, req *entity.ParkingOrderPaymentReq) (*entity.ParkingOrderItem, error)
 	}
 )
 

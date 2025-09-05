@@ -3,3 +3,13 @@
 // =================================================================================
 
 package parking_order
+
+import (
+	"parkin-ai-system/api/parking_order"
+)
+
+type ControllerParking_order struct{}
+
+func NewParking_order() parking_order.IParkingOrderParking_order {
+	return &ControllerParking_order{}
+}
