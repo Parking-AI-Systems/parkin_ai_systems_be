@@ -45,7 +45,7 @@ var (
 
 			userCtrl := user.NewUser()
 			vehiclesCtrl := &vehicles.ControllerVehicles{}
-			parkingLotCtrl := parking_lot.NewParkingLot()
+			parkingLotCtrl := parking_lot.NewParking_lot()
 			parkingLotReviewCtrl := parking_lot_review.NewParkingLotReview()
 			otherServiceCtrl := other_service.NewOtherService()
 			otherServiceOrderCtrl := other_service_order.NewOtherServiceOrder()
@@ -67,7 +67,7 @@ var (
 				group.POST("/user/register", userCtrl.Register)
 				group.POST("/user/login", userCtrl.UserLogin)
 				group.POST("/user/refresh", userCtrl.RefreshToken)
-				group.GET("/parking-lots/{id}", parkingLotCtrl.ParkingLotDetail)
+				group.GET("/parking-lots/{id}", parkingLotCtrl.ParkingLotGet)
 
 				// Protected routes (auth required)
 				group.Group("/", func(authGroup *ghttp.RouterGroup) {
