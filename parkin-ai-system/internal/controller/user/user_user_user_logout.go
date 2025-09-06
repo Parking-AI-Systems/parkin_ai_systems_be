@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/user/user"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 func (c *ControllerUser) UserLogout(ctx context.Context, req *user.UserLogoutReq) (res *user.UserLogoutRes, err error) {
@@ -22,5 +24,10 @@ func (c *ControllerUser) UserLogout(ctx context.Context, req *user.UserLogoutReq
 	res = &user.UserLogoutRes{
 		Message: logoutRes.Message,
 	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
+	}
+
 	return res, nil
 }

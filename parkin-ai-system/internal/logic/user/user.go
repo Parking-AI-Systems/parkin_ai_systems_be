@@ -10,6 +10,7 @@ import (
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
 	"parkin-ai-system/utility"
+	"time"
 
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
@@ -153,7 +154,7 @@ func (s *sUser) Login(ctx context.Context, req *entity.UserLoginReq) (res *entit
 	accessToken := &service.AccessToken{
 		Iss: "parkin-ai-system",
 		Sub: fmt.Sprintf("%d", userId),
-		Exp: 0, // Set appropriate expiry in production
+		Exp: gtime.Now().Add(time.Hour * 24).Unix(), // 24 hours expiry
 	}
 
 	accessTokenStr, err := accessToken.Gen()
@@ -169,7 +170,7 @@ func (s *sUser) Login(ctx context.Context, req *entity.UserLoginReq) (res *entit
 		Role:          userRecord["role"].String(),
 		WalletBalance: userRecord["wallet_balance"].Float64(),
 	}
-	return
+	return res, nil
 }
 
 func (s *sUser) RefreshToken(ctx context.Context, req *entity.UserRefreshTokenReq) (res *entity.UserRefreshTokenRes, err error) {

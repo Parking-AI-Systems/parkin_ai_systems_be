@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/parking_order/parking_order"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 // ParkingOrderCancel cancels a parking order by calling the service.
@@ -24,6 +26,10 @@ func (c *ControllerParking_order) ParkingOrderCancel(ctx context.Context, req *p
 	// Create response
 	res = &parking_order.ParkingOrderCancelRes{
 		Order: entityToApiParkingOrderItem(order),
+	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
 	}
 	return res, nil
 }

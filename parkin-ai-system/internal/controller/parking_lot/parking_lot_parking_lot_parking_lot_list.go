@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/parking_lot/parking_lot"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 func (c *ControllerParking_lot) ParkingLotList(ctx context.Context, req *parking_lot.ParkingLotListReq) (res *parking_lot.ParkingLotListRes, err error) {
@@ -31,6 +33,10 @@ func (c *ControllerParking_lot) ParkingLotList(ctx context.Context, req *parking
 	}
 	for _, item := range listRes.List {
 		res.List = append(res.List, entityToApiParkingLotItem(&item))
+	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
 	}
 	return res, nil
 }

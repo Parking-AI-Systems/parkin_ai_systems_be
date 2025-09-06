@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/user/user"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 func (c *ControllerUser) UserList(ctx context.Context, req *user.UserListReq) (res *user.UserListRes, err error) {
@@ -47,5 +49,10 @@ func (c *ControllerUser) UserList(ctx context.Context, req *user.UserListReq) (r
 			UpdatedAt:     item.UpdatedAt,
 		})
 	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
+	}
+
 	return res, nil
 }

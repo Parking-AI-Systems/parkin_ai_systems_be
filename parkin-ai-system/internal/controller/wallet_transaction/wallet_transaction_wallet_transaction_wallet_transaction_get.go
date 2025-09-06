@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/wallet_transaction/wallet_transaction"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 func (c *ControllerWallet_transaction) WalletTransactionGet(ctx context.Context, req *wallet_transaction.WalletTransactionGetReq) (res *wallet_transaction.WalletTransactionGetRes, err error) {
@@ -31,6 +33,10 @@ func (c *ControllerWallet_transaction) WalletTransactionGet(ctx context.Context,
 			RelatedOrderId: tx.RelatedOrderId,
 			CreatedAt:      tx.CreatedAt,
 		},
+	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
 	}
 	return res, nil
 }

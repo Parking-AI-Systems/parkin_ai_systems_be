@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/user/user"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 func (c *ControllerUser) UserUpdateRole(ctx context.Context, req *user.UserUpdateRoleReq) (res *user.UserUpdateRoleRes, err error) {
@@ -25,5 +27,10 @@ func (c *ControllerUser) UserUpdateRole(ctx context.Context, req *user.UserUpdat
 	res = &user.UserUpdateRoleRes{
 		Message: updateRes.Message,
 	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
+	}
+
 	return res, nil
 }

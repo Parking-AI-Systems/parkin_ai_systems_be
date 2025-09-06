@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/vehicle/vehicle"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 func (c *ControllerVehicle) VehicleDelete(ctx context.Context, req *vehicle.VehicleDeleteReq) (res *vehicle.VehicleDeleteRes, err error) {
@@ -23,6 +25,10 @@ func (c *ControllerVehicle) VehicleDelete(ctx context.Context, req *vehicle.Vehi
 	// Map entity response to API response
 	res = &vehicle.VehicleDeleteRes{
 		Message: deleteRes.Message,
+	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
 	}
 	return res, nil
 }

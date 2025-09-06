@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/other_service_orders/other_service_orders"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 func (c *ControllerOther_service_orders) OthersServiceOrderList(ctx context.Context, req *other_service_orders.OthersServiceOrderListReq) (res *other_service_orders.OthersServiceOrderListRes, err error) {
@@ -31,6 +33,10 @@ func (c *ControllerOther_service_orders) OthersServiceOrderList(ctx context.Cont
 	}
 	for _, item := range listRes.List {
 		res.List = append(res.List, entityToApiServiceOrderItem(&item))
+	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
 	}
 	return res, nil
 }

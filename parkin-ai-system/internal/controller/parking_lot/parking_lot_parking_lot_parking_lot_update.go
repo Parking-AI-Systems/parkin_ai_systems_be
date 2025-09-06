@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/parking_lot/parking_lot"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 func (c *ControllerParking_lot) ParkingLotUpdate(ctx context.Context, req *parking_lot.ParkingLotUpdateReq) (res *parking_lot.ParkingLotUpdateRes, err error) {
@@ -34,6 +36,10 @@ func (c *ControllerParking_lot) ParkingLotUpdate(ctx context.Context, req *parki
 	// Map entity response to API response
 	res = &parking_lot.ParkingLotUpdateRes{
 		Lot: entityToApiParkingLotItem(updateRes),
+	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
 	}
 	return res, nil
 }

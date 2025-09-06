@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/parking_order/parking_order"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 // ParkingOrderGet retrieves a parking order by calling the service.
@@ -24,6 +26,10 @@ func (c *ControllerParking_order) ParkingOrderGet(ctx context.Context, req *park
 	// Create response with mapped order
 	res = &parking_order.ParkingOrderGetRes{
 		Order: entityToApiParkingOrderItem(order),
+	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
 	}
 	return res, nil
 }

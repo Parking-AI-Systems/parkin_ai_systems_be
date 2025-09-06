@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/parking_lot_review/parking_lot_review"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 func (c *ControllerParking_lot_review) ParkingLotReviewList(ctx context.Context, req *parking_lot_review.ParkingLotReviewListReq) (res *parking_lot_review.ParkingLotReviewListRes, err error) {
@@ -36,6 +38,10 @@ func (c *ControllerParking_lot_review) ParkingLotReviewList(ctx context.Context,
 			Comment:   item.Comment,
 			CreatedAt: item.CreatedAt,
 		})
+	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
 	}
 	return res, nil
 }

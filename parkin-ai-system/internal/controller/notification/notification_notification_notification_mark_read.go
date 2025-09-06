@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/notification/notification"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 func (c *ControllerNotification) NotificationMarkRead(ctx context.Context, req *notification.NotificationMarkReadReq) (res *notification.NotificationMarkReadRes, err error) {
@@ -23,6 +25,10 @@ func (c *ControllerNotification) NotificationMarkRead(ctx context.Context, req *
 	// Map entity response to API response
 	res = &notification.NotificationMarkReadRes{
 		Message: markRes.Message,
+	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
 	}
 	return res, nil
 }

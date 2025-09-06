@@ -47,6 +47,8 @@ var (
 	CodeNotFound            = customCode{code: 1004, message: "Not found", detail: nil, httpStatus: http.StatusNotFound}
 	CodeServiceNotFound     = customCode{code: 1101, message: "Service not found", detail: nil, httpStatus: http.StatusNotFound}
 	CodeInvalidOperation    = customCode{code: 1201, message: "Invalid operation", detail: nil, httpStatus: http.StatusBadRequest}
+	CodeTooManyRequests     = customCode{code: 1301, message: "Too many requests", detail: nil, httpStatus: http.StatusTooManyRequests}
+	CodeInternalError       = customCode{code: 1401, message: "Internal server error", detail: nil, httpStatus: http.StatusInternalServerError}
 )
 
 type customCode struct {

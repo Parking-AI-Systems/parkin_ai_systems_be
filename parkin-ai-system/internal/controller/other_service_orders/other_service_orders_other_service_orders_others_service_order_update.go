@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/other_service_orders/other_service_orders"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 func (c *ControllerOther_service_orders) OthersServiceOrderUpdate(ctx context.Context, req *other_service_orders.OthersServiceOrderUpdateReq) (res *other_service_orders.OthersServiceOrderUpdateRes, err error) {
@@ -25,6 +27,10 @@ func (c *ControllerOther_service_orders) OthersServiceOrderUpdate(ctx context.Co
 	// Map entity response to API response
 	res = &other_service_orders.OthersServiceOrderUpdateRes{
 		Order: entityToApiServiceOrderItem(updateRes),
+	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
 	}
 	return res, nil
 }

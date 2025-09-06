@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/notification/notification"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 func (c *ControllerNotification) NotificationList(ctx context.Context, req *notification.NotificationListReq) (res *notification.NotificationListRes, err error) {
@@ -38,6 +40,10 @@ func (c *ControllerNotification) NotificationList(ctx context.Context, req *noti
 			CreatedAt:      item.CreatedAt,
 			RelatedInfo:    item.RelatedInfo,
 		})
+	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
 	}
 	return res, nil
 }

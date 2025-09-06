@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/user/user"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 func (c *ControllerUser) UserDelete(ctx context.Context, req *user.UserDeleteReq) (res *user.UserDeleteRes, err error) {
@@ -24,5 +26,10 @@ func (c *ControllerUser) UserDelete(ctx context.Context, req *user.UserDeleteReq
 	res = &user.UserDeleteRes{
 		Message: deleteRes.Message,
 	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
+	}
+
 	return res, nil
 }

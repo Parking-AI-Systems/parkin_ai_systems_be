@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/parking_order/parking_order"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 // ParkingOrderAdd creates a new parking order by calling the service.
@@ -27,6 +29,10 @@ func (c *ControllerParking_order) ParkingOrderAdd(ctx context.Context, req *park
 	// Create response
 	res = &parking_order.ParkingOrderAddRes{
 		Id: orderId.Id,
+	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
 	}
 	return res, nil
 }

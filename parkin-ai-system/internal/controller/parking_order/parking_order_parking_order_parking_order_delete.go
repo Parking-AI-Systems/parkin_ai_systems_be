@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/parking_order/parking_order"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 // ParkingOrderDelete soft deletes a parking order by calling the service.
@@ -24,6 +26,10 @@ func (c *ControllerParking_order) ParkingOrderDelete(ctx context.Context, req *p
 	// Create response
 	res = &parking_order.ParkingOrderDeleteRes{
 		Message: message.Message,
+	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
 	}
 	return res, nil
 }

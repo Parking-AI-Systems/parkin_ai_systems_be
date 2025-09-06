@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/vehicle/vehicle"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 func (c *ControllerVehicle) VehicleAdd(ctx context.Context, req *vehicle.VehicleAddReq) (res *vehicle.VehicleAddRes, err error) {
@@ -27,6 +29,10 @@ func (c *ControllerVehicle) VehicleAdd(ctx context.Context, req *vehicle.Vehicle
 	// Map entity response to API response
 	res = &vehicle.VehicleAddRes{
 		Id: addRes.Id,
+	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
 	}
 	return res, nil
 }

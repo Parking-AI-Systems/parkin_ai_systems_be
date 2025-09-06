@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/favourite/favourite"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 func (c *ControllerFavourite) FavoriteList(ctx context.Context, req *favourite.FavoriteListReq) (res *favourite.FavoriteListRes, err error) {
@@ -35,6 +37,10 @@ func (c *ControllerFavourite) FavoriteList(ctx context.Context, req *favourite.F
 			LotAddress: item.LotAddress,
 			CreatedAt:  item.CreatedAt,
 		})
+	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
 	}
 	return res, nil
 }

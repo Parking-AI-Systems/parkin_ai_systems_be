@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/wallet_transaction/wallet_transaction"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 func (c *ControllerWallet_transaction) WalletTransactionAdd(ctx context.Context, req *wallet_transaction.WalletTransactionAddReq) (res *wallet_transaction.WalletTransactionAddRes, err error) {
@@ -27,6 +29,10 @@ func (c *ControllerWallet_transaction) WalletTransactionAdd(ctx context.Context,
 	// Map entity response to API response
 	res = &wallet_transaction.WalletTransactionAddRes{
 		Id: addRes.Id,
+	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
 	}
 	return res, nil
 }

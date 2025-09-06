@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/user/user"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 func (c *ControllerUser) UserLogin(ctx context.Context, req *user.UserLoginReq) (res *user.UserLoginRes, err error) {
@@ -15,9 +17,9 @@ func (c *ControllerUser) UserLogin(ctx context.Context, req *user.UserLoginReq) 
 		Password: req.Password,
 	}
 
-	// Call service
 	loginRes, err := service.User().Login(ctx, input)
 	if err != nil {
+		g.Log().Error(ctx, "UserLogin - Service error:", err)
 		return nil, err
 	}
 
@@ -30,5 +32,11 @@ func (c *ControllerUser) UserLogin(ctx context.Context, req *user.UserLoginReq) 
 		Role:          loginRes.Role,
 		WalletBalance: loginRes.WalletBalance,
 	}
+
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
+	}
+
 	return res, nil
 }

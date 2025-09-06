@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/parking_slot/parking_slot"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 func (c *ControllerParking_slot) ParkingSlotGet(ctx context.Context, req *parking_slot.ParkingSlotGetReq) (res *parking_slot.ParkingSlotGetRes, err error) {
@@ -31,6 +33,10 @@ func (c *ControllerParking_slot) ParkingSlotGet(ctx context.Context, req *parkin
 			Floor:       slot.Floor,
 			CreatedAt:   slot.CreatedAt,
 		},
+	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
 	}
 	return res, nil
 }

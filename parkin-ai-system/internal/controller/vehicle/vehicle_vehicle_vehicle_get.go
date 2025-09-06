@@ -6,6 +6,8 @@ import (
 	"parkin-ai-system/api/vehicle/vehicle"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
 func (c *ControllerVehicle) VehicleGet(ctx context.Context, req *vehicle.VehicleGetReq) (res *vehicle.VehicleGetRes, err error) {
@@ -31,6 +33,10 @@ func (c *ControllerVehicle) VehicleGet(ctx context.Context, req *vehicle.Vehicle
 			Type:         veh.Type,
 			CreatedAt:    veh.CreatedAt,
 		},
+	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
 	}
 	return res, nil
 }

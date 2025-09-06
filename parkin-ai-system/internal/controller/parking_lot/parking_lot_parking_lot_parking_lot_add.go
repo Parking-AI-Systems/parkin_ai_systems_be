@@ -6,21 +6,10 @@ import (
 	"parkin-ai-system/api/parking_lot/parking_lot"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/frame/g"
 )
 
-// Name         string               `json:"name"`
-//
-//	Address      string               `json:"address"`
-//	Latitude     float64              `json:"latitude"`
-//	Longitude    float64              `json:"longitude"`
-//	IsVerified   bool                 `json:"isVerified"`
-//	IsActive     bool                 `json:"isActive"`
-//	TotalSlots   int                  `json:"totalSlots"`
-//	PricePerHour float64              `json:"pricePerHour"`
-//	Description  string               `json:"description"`
-//	OpenTime     *gtime.Time          `json:"openTime"`
-//	CloseTime    *gtime.Time          `json:"closeTime"`
-//	Images       []ParkingLotImageInput `json:"images"`
 func (c *ControllerParking_lot) ParkingLotAdd(ctx context.Context, req *parking_lot.ParkingLotAddReq) (res *parking_lot.ParkingLotAddRes, err error) {
 	// Map API request to entity request
 	input := &entity.ParkingLotAddReq{
@@ -52,6 +41,10 @@ func (c *ControllerParking_lot) ParkingLotAdd(ctx context.Context, req *parking_
 	// Map entity response to API response
 	res = &parking_lot.ParkingLotAddRes{
 		Id: addRes.Id,
+	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(res)
+		return nil, nil
 	}
 	return res, nil
 }
