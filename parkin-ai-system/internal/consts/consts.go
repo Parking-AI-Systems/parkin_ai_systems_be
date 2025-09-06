@@ -9,6 +9,15 @@ const (
 )
 
 const (
+	VehicleTypeCar       = "car"
+	VehicleTypeMotorbike = "motorbike"
+	VehicleTypeTruck     = "truck"
+)
+
+var ValidVehicleTypes = []string{VehicleTypeCar, VehicleTypeMotorbike, VehicleTypeTruck}
+
+// Slot types from parking_slots
+const (
 	SlotTypeStandard = "standard"
 	SlotTypeDisabled = "disabled"
 	SlotTypeElectric = "electric"
@@ -17,10 +26,9 @@ const (
 
 var ValidSlotTypes = []string{SlotTypeStandard, SlotTypeDisabled, SlotTypeElectric, SlotTypeVIP}
 
-const (
-	VehicleTypeCar       = "car"
-	VehicleTypeMotorbike = "motorbike"
-	VehicleTypeTruck     = "truck"
-)
-
-var ValidVehicleTypes = []string{VehicleTypeCar, VehicleTypeMotorbike, VehicleTypeTruck}
+// Vehicle-Slot compatibility map
+var VehicleSlotCompatibility = map[string][]string{
+	VehicleTypeCar:       {SlotTypeStandard, SlotTypeDisabled, SlotTypeVIP},
+	VehicleTypeMotorbike: {SlotTypeStandard},
+	VehicleTypeTruck:     {SlotTypeStandard, SlotTypeVIP},
+}

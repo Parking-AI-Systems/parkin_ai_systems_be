@@ -8,6 +8,7 @@ import (
 	"parkin-ai-system/internal/model/do"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+	"regexp"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -24,6 +25,9 @@ func init() {
 	Init()
 }
 
+// License plate format: e.g., 29A-12345 or 51H-67890
+var licensePlateRegex = regexp.MustCompile(`^[0-9]{2}[A-Z]-[0-9]{4,5}$`)
+
 func (s *sVehicle) VehicleAdd(ctx context.Context, req *entity.VehicleAddReq) (*entity.VehicleAddRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
@@ -36,6 +40,10 @@ func (s *sVehicle) VehicleAdd(ctx context.Context, req *entity.VehicleAddReq) (*
 	}
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+	}
+
+	if !licensePlateRegex.MatchString(req.LicensePlate) {
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Invalid license plate format. Must be like XXA-12345")
 	}
 
 	count, err := dao.Vehicles.Ctx(ctx).Where("license_plate", req.LicensePlate).Count()
@@ -101,7 +109,7 @@ func (s *sVehicle) VehicleAdd(ctx context.Context, req *entity.VehicleAddReq) (*
 
 	for _, admin := range adminUsers {
 		notiData := do.Notifications{
-			UserId:         gconv.Int64(admin.Map()["id"]),
+			UserId:         admin["id"].Int64(),
 			Type:           "vehicle_added",
 			Content:        fmt.Sprintf("New vehicle #%d (%s) added by user #%d.", lastId, req.LicensePlate, gconv.Int64(userID)),
 			RelatedOrderId: lastId,
@@ -271,6 +279,9 @@ func (s *sVehicle) VehicleUpdate(ctx context.Context, req *entity.VehicleUpdateR
 	}
 
 	if req.LicensePlate != "" {
+		if !licensePlateRegex.MatchString(req.LicensePlate) {
+			return nil, gerror.NewCode(consts.CodeInvalidInput, "Invalid license plate format. Must be like XXA-12345")
+		}
 		count, err := dao.Vehicles.Ctx(ctx).
 			Where("license_plate", req.LicensePlate).
 			Where("id != ?", req.Id).
@@ -348,7 +359,7 @@ func (s *sVehicle) VehicleUpdate(ctx context.Context, req *entity.VehicleUpdateR
 
 	for _, admin := range adminUsers {
 		notiData := do.Notifications{
-			UserId:         gconv.Int64(admin.Map()["id"]),
+			UserId:         admin["id"].Int64(),
 			Type:           "vehicle_updated",
 			Content:        fmt.Sprintf("Vehicle #%d (%s) has been updated.", req.Id, req.LicensePlate),
 			RelatedOrderId: req.Id,
@@ -454,7 +465,7 @@ func (s *sVehicle) VehicleDelete(ctx context.Context, req *entity.VehicleDeleteR
 
 	for _, admin := range adminUsers {
 		notiData := do.Notifications{
-			UserId:         gconv.Int64(admin.Map()["id"]),
+			UserId:         admin["id"].Int64(),
 			Type:           "vehicle_deleted",
 			Content:        fmt.Sprintf("Vehicle #%d (%s) has been deleted.", req.Id, vehicle.Map()["license_plate"]),
 			RelatedOrderId: req.Id,
@@ -473,4 +484,39 @@ func (s *sVehicle) VehicleDelete(ctx context.Context, req *entity.VehicleDeleteR
 	}
 
 	return &entity.VehicleDeleteRes{Message: "Vehicle deleted successfully"}, nil
+}
+
+// CheckVehicleSlotCompatibility checks if a vehicle type is compatible with a parking slot type
+func (s *sVehicle) CheckVehicleSlotCompatibility(ctx context.Context, vehicleID, slotID int64) error {
+	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", vehicleID).One()
+	if err != nil {
+		return gerror.NewCode(consts.CodeDatabaseError, "Error checking vehicle")
+	}
+	if vehicle.IsEmpty() {
+		return gerror.NewCode(consts.CodeNotFound, "Vehicle not found")
+	}
+
+	slot, err := dao.ParkingSlots.Ctx(ctx).Where("id", slotID).One()
+	if err != nil {
+		return gerror.NewCode(consts.CodeDatabaseError, "Error checking parking slot")
+	}
+	if slot.IsEmpty() {
+		return gerror.NewCode(consts.CodeNotFound, "Parking slot not found")
+	}
+
+	vehicleType := gconv.String(vehicle.Map()["type"])
+	slotType := gconv.String(slot.Map()["slot_type"])
+
+	compatibleSlots, exists := consts.VehicleSlotCompatibility[vehicleType]
+	if !exists {
+		return gerror.NewCode(consts.CodeInvalidInput, "Invalid vehicle type")
+	}
+
+	for _, compatibleSlotType := range compatibleSlots {
+		if slotType == compatibleSlotType {
+			return nil
+		}
+	}
+
+	return gerror.NewCode(consts.CodeInvalidInput, fmt.Sprintf("Vehicle type %s is not compatible with slot type %s", vehicleType, slotType))
 }
