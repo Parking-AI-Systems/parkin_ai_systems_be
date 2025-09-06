@@ -7,15 +7,16 @@ package service
 
 import (
 	"context"
-	"parkin-ai-system/api/vehicle/vehicle"
+	"parkin-ai-system/internal/model/entity"
 )
 
 type (
 	IVehicle interface {
-		Add(ctx context.Context, req *vehicle.VehicleAddReq) (res *vehicle.VehicleAddRes, err error)
-		List(ctx context.Context, req *vehicle.VehicleListReq) (res *vehicle.VehicleListRes, err error)
-		Detail(ctx context.Context, req *vehicle.VehicleDetailReq) (res *vehicle.VehicleDetailRes, err error)
-		Update(ctx context.Context, req *vehicle.VehicleUpdateReq) (res *vehicle.VehicleUpdateRes, err error)
+		VehicleAdd(ctx context.Context, req *entity.VehicleAddReq) (*entity.VehicleAddRes, error)
+		VehicleList(ctx context.Context, req *entity.VehicleListReq) (*entity.VehicleListRes, error)
+		VehicleGet(ctx context.Context, req *entity.VehicleGetReq) (*entity.VehicleItem, error)
+		VehicleUpdate(ctx context.Context, req *entity.VehicleUpdateReq) (*entity.VehicleItem, error)
+		VehicleDelete(ctx context.Context, req *entity.VehicleDeleteReq) (*entity.VehicleDeleteRes, error)
 	}
 )
 

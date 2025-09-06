@@ -16,3 +16,11 @@ const (
 )
 
 var ValidSlotTypes = []string{SlotTypeStandard, SlotTypeDisabled, SlotTypeElectric, SlotTypeVIP}
+
+const (
+	VehicleTypeCar       = "car"
+	VehicleTypeMotorbike = "motorbike"
+	VehicleTypeTruck     = "truck"
+)
+
+var ValidVehicleTypes = []string{VehicleTypeCar, VehicleTypeMotorbike, VehicleTypeTruck}
