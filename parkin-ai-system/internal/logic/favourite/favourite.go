@@ -2,6 +2,7 @@ package favourite
 
 import (
 	"context"
+	"fmt"
 	"parkin-ai-system/internal/consts"
 	"parkin-ai-system/internal/dao"
 	"parkin-ai-system/internal/model/do"
@@ -9,139 +10,236 @@ import (
 	"parkin-ai-system/internal/service"
 
 	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/gogf/gf/v2/util/gconv"
 )
 
-type sFavourite struct{}
+type sFavorite struct{}
 
-func InitFavourite() {
-	service.RegisterFavourite(&sFavourite{})
+func Init() {
+	service.RegisterFavorite(&sFavorite{})
 }
-
 func init() {
-	InitFavourite()
+	Init()
 }
-func (s *sFavourite) FavouriteAdd(ctx context.Context, req *entity.FavoritesInput) (res *entity.FavoritesOutput, err error) {
-	userId, ok := ctx.Value("user_id").(int64)
-	if !ok {
-		return nil, gerror.NewCode(consts.CodeUnauthorized)
+
+func (s *sFavorite) FavoriteAdd(ctx context.Context, req *entity.FavoriteAddReq) (*entity.FavoriteAddRes, error) {
+	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	if userID == "" {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
 	}
+
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+	}
+	if user.IsEmpty() {
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+	}
+
 	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).One()
 	if err != nil {
-		return nil, err
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking lot")
 	}
 	if lot.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeParkingLotNotFound)
+		return nil, gerror.NewCode(consts.CodeNotFound, "Parking lot not found")
 	}
-	exist, err := dao.Favorites.Ctx(ctx).
-		Where("user_id", userId).
+
+	count, err := dao.Favorites.Ctx(ctx).
+		Where("user_id", userID).
 		Where("lot_id", req.LotId).
-		One()
+		Count()
 	if err != nil {
-		return nil, err
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking favorite lot")
 	}
-	if !exist.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeAlreadyFavorited)
+	if count > 0 {
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Parking lot is already in favorites")
 	}
-	now := gtime.Now()
-	fav := do.Favorites{
-		UserId:    userId,
-		LotId:     req.LotId,
-		CreatedAt: now,
-	}
-	_, err = dao.Favorites.Ctx(ctx).Data(fav).Insert()
+
+	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, err
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
 	}
-	res = &entity.FavoritesOutput{
-		UserId:    userId,
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	data := do.Favorites{
+		UserId:    gconv.Int64(userID),
 		LotId:     req.LotId,
-		CreatedAt: now,
+		CreatedAt: gtime.Now(),
 	}
-	return
+	lastId, err := dao.Favorites.Ctx(ctx).TX(tx).Data(data).InsertAndGetId()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error adding favorite lot")
+	}
+
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", "admin").All()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
+	}
+
+	for _, admin := range adminUsers {
+		notiData := do.Notifications{
+			UserId:         gconv.Int64(admin["id"]),
+			Type:           "favorite_lot_added",
+			Content:        fmt.Sprintf("User #%d added parking lot #%d to favorites.", gconv.Int64(userID), req.LotId),
+			RelatedOrderId: lastId,
+			IsRead:         false,
+			CreatedAt:      gtime.Now(),
+		}
+		_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
+		if err != nil {
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+	}
+
+	return &entity.FavoriteAddRes{Id: lastId}, nil
 }
 
-func (s *sFavourite) FavouriteDelete(ctx context.Context, req *entity.FavoritesInput) (res *entity.FavoriteDelRes, err error) {
-	userId, ok := ctx.Value("user_id").(int64)
-	if !ok {
-		return nil, gerror.NewCode(consts.CodeUnauthorized)
-	}
-	r, err := dao.Favorites.Ctx(ctx).
-		Where("user_id", userId).
-		Where("lot_id", req.LotId).
-		Delete()
-	if err != nil {
-		return nil, err
+func (s *sFavorite) FavoriteList(ctx context.Context, req *entity.FavoriteListReq) (*entity.FavoriteListRes, error) {
+	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	if userID == "" {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
 	}
 
-	affected, err := r.RowsAffected()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
 	if err != nil {
-		return nil, err
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
 	}
-	if affected == 0 {
-		return nil, gerror.NewCode(consts.CodeFavoriteNotFound)
+	if user.IsEmpty() {
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
 
-	return &entity.FavoriteDelRes{
-		Success: true,
-		LotId:   req.LotId,
-		UserId:  userId,
+	m := dao.Favorites.Ctx(ctx).
+		Fields("favorites.*, parking_lots.name as lot_name, parking_lots.address as lot_address").
+		LeftJoin("parking_lots", "parking_lots.id = favorites.lot_id")
+
+	isAdmin := gconv.String(user.Map()["role"]) == "admin"
+	if !isAdmin {
+		m = m.Where("favorites.user_id", userID)
+	}
+
+	if req.LotName != "" {
+		m = m.WhereLike("parking_lots.name", "%"+req.LotName+"%")
+	}
+
+	total, err := m.Count()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error counting favorite lots")
+	}
+
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.PageSize <= 0 {
+		req.PageSize = 10
+	}
+	m = m.Limit(req.PageSize).Offset((req.Page - 1) * req.PageSize)
+
+	var favorites []struct {
+		entity.Favorites
+		LotName    string `json:"lot_name"`
+		LotAddress string `json:"lot_address"`
+	}
+	err = m.Order("favorites.id DESC").Scan(&favorites)
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving favorite lots")
+	}
+
+	list := make([]entity.FavoriteItem, 0, len(favorites))
+	for _, f := range favorites {
+		item := entity.FavoriteItem{
+			Id:         f.Id,
+			UserId:     f.UserId,
+			LotId:      f.LotId,
+			LotName:    f.LotName,
+			LotAddress: f.LotAddress,
+			CreatedAt:  f.CreatedAt.Format("2006-01-02 15:04:05"),
+		}
+		list = append(list, item)
+	}
+
+	return &entity.FavoriteListRes{
+		List:  list,
+		Total: total,
 	}, nil
 }
 
-func (s *sFavourite) FavouriteList(ctx context.Context, req *entity.FavoriteListReq) (res *entity.FavouriteListRes, err error) {
-	userId, ok := ctx.Value("user_id").(int64)
-	if !ok {
-		return nil, gerror.NewCode(consts.CodeUnauthorized)
+func (s *sFavorite) FavoriteDelete(ctx context.Context, req *entity.FavoriteDeleteReq) (*entity.FavoriteDeleteRes, error) {
+	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	if userID == "" {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
 	}
-	total, err := dao.Favorites.Ctx(ctx).Where("user_id", userId).Count()
+
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
 	if err != nil {
-		return nil, err
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+	}
+	if user.IsEmpty() {
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
 
-	all, err := dao.Favorites.Ctx(ctx).
-		Fields("favorites.id, favorites.lot_id, favorites.created_at, parking_lots.name as lot_name, parking_lots.address").
-		LeftJoin("parking_lots", "favorites.lot_id = parking_lots.id").
-		Where("favorites.user_id", userId).
-		OrderDesc("favorites.created_at").
-		Limit(req.PageSize).
-		Offset((req.Page - 1) * req.PageSize).
-		All()
+	favorite, err := dao.Favorites.Ctx(ctx).Where("id", req.Id).One()
 	if err != nil {
-		return nil, err
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking favorite lot")
+	}
+	if favorite.IsEmpty() {
+		return nil, gerror.NewCode(consts.CodeNotFound, "Favorite lot not found")
 	}
 
-	favs := make([]entity.FavouriteInfo, 0, len(all))
-	for _, r := range all {
-		favs = append(favs, entity.FavouriteInfo{
-			Id:        r["id"].Int64(),
-			LotId:     r["lot_id"].Int64(),
-			LotName:   r["lot_name"].String(),
-			Address:   r["address"].String(),
-			CreatedAt: r["created_at"].GTime().Format("Y-m-d H:i:s"),
-		})
+	isAdmin := gconv.String(user.Map()["role"]) == "admin"
+	if !isAdmin && gconv.Int64(favorite.Map()["user_id"]) != gconv.Int64(userID) {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only delete your own favorite lots or must be an admin")
 	}
 
-	return &entity.FavouriteListRes{
-		Favourites: favs,
-		Total:      total,
-		Page:       req.Page,
-		PageSize:   req.PageSize,
-	}, nil
-}
-
-func (s *sFavourite) FavouriteStatus(ctx context.Context, req *entity.FavouriteStatusReq) (res *entity.FavouriteStatusRes, err error) {
-	userId, ok := ctx.Value("user_id").(int64)
-	if !ok {
-		return nil, gerror.NewCode(consts.CodeUnauthorized)
-	}
-	exist, err := dao.Favorites.Ctx(ctx).
-		Where("user_id", userId).
-		Where("lot_id", req.LotId).
-		One()
+	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, err
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
 	}
-	res = &entity.FavouriteStatusRes{IsFavourite: !exist.IsEmpty()}
-	return
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	_, err = dao.Favorites.Ctx(ctx).TX(tx).Where("id", req.Id).Delete()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting favorite lot")
+	}
+
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", "admin").All()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
+	}
+
+	for _, admin := range adminUsers {
+		notiData := do.Notifications{
+			UserId:         gconv.Int64(admin["id"]),
+			Type:           "favorite_lot_deleted",
+			Content:        fmt.Sprintf("User #%d removed parking lot #%d from favorites.", gconv.Int64(userID), favorite.Map()["lot_id"]),
+			RelatedOrderId: req.Id,
+			IsRead:         false,
+			CreatedAt:      gtime.Now(),
+		}
+		_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
+		if err != nil {
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+	}
+
+	return &entity.FavoriteDeleteRes{Message: "Favorite lot deleted successfully"}, nil
 }

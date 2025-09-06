@@ -11,25 +11,24 @@ import (
 )
 
 type (
-	IFavourite interface {
-		FavouriteAdd(ctx context.Context, req *entity.FavoritesInput) (res *entity.FavoritesOutput, err error)
-		FavouriteDelete(ctx context.Context, req *entity.FavoritesInput) (res *entity.FavoriteDelRes, err error)
-		FavouriteList(ctx context.Context, req *entity.FavoriteListReq) (res *entity.FavouriteListRes, err error)
-		FavouriteStatus(ctx context.Context, req *entity.FavouriteStatusReq) (res *entity.FavouriteStatusRes, err error)
+	IFavorite interface {
+		FavoriteAdd(ctx context.Context, req *entity.FavoriteAddReq) (*entity.FavoriteAddRes, error)
+		FavoriteList(ctx context.Context, req *entity.FavoriteListReq) (*entity.FavoriteListRes, error)
+		FavoriteDelete(ctx context.Context, req *entity.FavoriteDeleteReq) (*entity.FavoriteDeleteRes, error)
 	}
 )
 
 var (
-	localFavourite IFavourite
+	localFavorite IFavorite
 )
 
-func Favourite() IFavourite {
-	if localFavourite == nil {
-		panic("implement not found for interface IFavourite, forgot register?")
+func Favorite() IFavorite {
+	if localFavorite == nil {
+		panic("implement not found for interface IFavorite, forgot register?")
 	}
-	return localFavourite
+	return localFavorite
 }
 
-func RegisterFavourite(i IFavourite) {
-	localFavourite = i
+func RegisterFavorite(i IFavorite) {
+	localFavorite = i
 }

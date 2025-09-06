@@ -15,43 +15,38 @@ type Favorites struct {
 	LotId     int64       `json:"lotId"     orm:"lot_id"     description:""`
 	CreatedAt *gtime.Time `json:"createdAt" orm:"created_at" description:""`
 }
-type FavoritesInput struct {
-	Id        int64       `json:"id"`
-	UserId    int64       `json:"userId"`
-	LotId     int64       `json:"lotId"`
-	CreatedAt *gtime.Time `json:"createdAt"`
+type FavoriteAddReq struct {
+	LotId int64 `json:"lotId"`
 }
-type FavoritesOutput struct {
-	Id        int64       `json:"id"`
-	UserId    int64       `json:"userId"`
-	LotId     int64       `json:"lotId"`
-	CreatedAt *gtime.Time `json:"createdAt"`
+
+type FavoriteAddRes struct {
+	Id int64 `json:"id"`
 }
-type FavoriteDelRes struct {
-	Success bool `json:"success"`
-	LotId   int64 `json:"lotId"`
-	UserId  int64 `json:"userId"`
-}
+
 type FavoriteListReq struct {
-	Page     int `json:"page"     v:"min:1#Page must be at least 1"    dc:"1"`
-	PageSize int `json:"pageSize" v:"min:1|max:100#PageSize must be between 1 and 100" dc:"10"`
+	LotName  string `json:"lotName"`
+	Page     int    `json:"page"`
+	PageSize int    `json:"pageSize"`
 }
-type FavouriteListRes struct {
-	Favourites []FavouriteInfo `json:"favourites"`
-	Page 	 int             `json:"page"`
-	PageSize int             `json:"pageSize"`
-	Total 	 int             `json:"total"`
+
+type FavoriteItem struct {
+	Id         int64  `json:"id"`
+	UserId     int64  `json:"user_id"`
+	LotId      int64  `json:"lot_id"`
+	LotName    string `json:"lot_name"`
+	LotAddress string `json:"lot_address"`
+	CreatedAt  string `json:"created_at"`
 }
-type FavouriteInfo struct {
-	Id        int64  `json:"id"`
-	LotId     int64  `json:"lotId"`
-	LotName   string `json:"lotName"`
-	Address   string `json:"address"`
-	CreatedAt string `json:"createdAt"`
+
+type FavoriteListRes struct {
+	List  []FavoriteItem `json:"list"`
+	Total int            `json:"total"`
 }
-type FavouriteStatusReq struct {
-	LotId int64 `json:"lotId" v:"required"`
+
+type FavoriteDeleteReq struct {
+	Id int64 `json:"id"`
 }
-type FavouriteStatusRes struct {
-	IsFavourite bool `json:"isFavourite"`
+
+type FavoriteDeleteRes struct {
+	Message string `json:"message"`
 }
