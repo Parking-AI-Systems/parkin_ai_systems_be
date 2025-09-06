@@ -39,6 +39,7 @@ func entityToApiOthersServiceItem(e *entity.OthersServiceItem) others_service.Ot
 	return others_service.OthersServiceItem{
 		Id:              e.Id,
 		LotId:           e.LotId,
+		LotName:         e.LotName,
 		Name:            e.Name,
 		Description:     e.Description,
 		Price:           e.Price,

@@ -37,7 +37,7 @@ func (s *sOthersService) OthersServiceAdd(ctx context.Context, req *entity.Other
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
-	if gconv.String(user.Map()["role"]) != "admin" {
+	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can add services")
 	}
 
@@ -118,19 +118,19 @@ func (s *sOthersService) OthersServiceList(ctx context.Context, req *entity.Othe
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
 
-	m := dao.OthersService.Ctx(ctx).
-		Fields("others_service.*, parking_lots.name as lot_name").
-		LeftJoin("parking_lots", "parking_lots.id = others_service.lot_id").
-		Where("parking_lots.deleted_at IS NULL")
+	// Build base query conditions
+	baseQuery := dao.OthersService.Ctx(ctx).
+		LeftJoin("parking_lots", "parking_lots.id = others_service.lot_id")
 
 	if req.LotId != 0 {
-		m = m.Where("others_service.lot_id", req.LotId)
+		baseQuery = baseQuery.Where("others_service.lot_id", req.LotId)
 	}
 	if req.IsActive {
-		m = m.Where("others_service.is_active", true)
+		baseQuery = baseQuery.Where("others_service.is_active", true)
 	}
 
-	total, err := m.Count()
+	// Count query - use simple field
+	total, err := baseQuery.Fields("others_service.id").Count()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error counting services")
 	}
@@ -141,13 +141,15 @@ func (s *sOthersService) OthersServiceList(ctx context.Context, req *entity.Othe
 	if req.PageSize <= 0 {
 		req.PageSize = 10
 	}
-	m = m.Limit(req.PageSize).Offset((req.Page - 1) * req.PageSize)
 
+	// Data query - use joined fields
 	var services []struct {
 		entity.OthersService
 		LotName string `json:"lot_name"`
 	}
-	err = m.Order("others_service.id DESC").Scan(&services)
+	err = baseQuery.Fields("others_service.*, parking_lots.name as lot_name").
+		Limit(req.PageSize).Offset((req.Page - 1) * req.PageSize).
+		Order("others_service.id DESC").Scan(&services)
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving services")
 	}
@@ -196,7 +198,6 @@ func (s *sOthersService) OthersServiceGet(ctx context.Context, req *entity.Other
 		Fields("others_service.*, parking_lots.name as lot_name").
 		LeftJoin("parking_lots", "parking_lots.id = others_service.lot_id").
 		Where("others_service.id", req.Id).
-		Where("parking_lots.deleted_at IS NULL").
 		Scan(&svc)
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving service")
@@ -233,7 +234,7 @@ func (s *sOthersService) OthersServiceUpdate(ctx context.Context, req *entity.Ot
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
-	if gconv.String(user.Map()["role"]) != "admin" {
+	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can update services")
 	}
 
@@ -359,7 +360,7 @@ func (s *sOthersService) OthersServiceDelete(ctx context.Context, req *entity.Ot
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
-	if gconv.String(user.Map()["role"]) != "admin" {
+	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can delete services")
 	}
 
