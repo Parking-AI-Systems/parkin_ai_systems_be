@@ -145,10 +145,9 @@ func (s *sVehicle) VehicleList(ctx context.Context, req *entity.VehicleListReq) 
 	}
 
 	m := dao.Vehicles.Ctx(ctx).
-		Fields("vehicles.*, users.username as username").
 		LeftJoin("users", "users.id = vehicles.user_id")
 
-	isAdmin := gconv.String(user.Map()["role"]) == "admin"
+	isAdmin := gconv.String(user.Map()["role"]) == "role_admin"
 	if !isAdmin {
 		m = m.Where("vehicles.user_id", userID)
 	}
@@ -157,7 +156,7 @@ func (s *sVehicle) VehicleList(ctx context.Context, req *entity.VehicleListReq) 
 		m = m.Where("vehicles.type", req.Type)
 	}
 
-	total, err := m.Count()
+	total, err := m.Fields("vehicles.id").Count()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error counting vehicles")
 	}
@@ -170,31 +169,59 @@ func (s *sVehicle) VehicleList(ctx context.Context, req *entity.VehicleListReq) 
 	}
 	m = m.Limit(req.PageSize).Offset((req.Page - 1) * req.PageSize)
 
-	var vehicles []struct {
-		entity.Vehicles
-		Username string `json:"username"`
-	}
-	err = m.Order("vehicles.id DESC").Scan(&vehicles)
+	// Add debug logging to see what's in the records
+	records, err := m.Fields(
+		"vehicles.id, vehicles.user_id, vehicles.license_plate, vehicles.brand, vehicles.model, vehicles.color, vehicles.type, vehicles.created_at, users.username",
+	).Order("vehicles.id DESC").All()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving vehicles")
 	}
 
-	list := make([]entity.VehicleItem, 0, len(vehicles))
-	for _, v := range vehicles {
-		item := entity.VehicleItem{
-			Id:           v.Id,
-			UserId:       v.UserId,
-			Username:     v.Username,
-			LicensePlate: v.LicensePlate,
-			Brand:        v.Brand,
-			Model:        v.Model,
-			Color:        v.Color,
-			Type:         v.Type,
-			CreatedAt:    v.CreatedAt.Format("2006-01-02 15:04:05"),
+	// Add debug logging
+	g.Log().Debug(ctx, "VehicleList - Records count:", len(records))
+	if len(records) > 0 {
+		g.Log().Debug(ctx, "VehicleList - First record:", records[0])
+		g.Log().Debug(ctx, "VehicleList - user_id value:", records[0]["user_id"])
+		g.Log().Debug(ctx, "VehicleList - username value:", records[0]["username"])
+	}
+
+	list := make([]entity.VehicleItem, 0, len(records))
+	for _, record := range records {
+		g.Log().Debug(ctx, "Processing record:", record)
+
+		username := ""
+		if record["username"] != nil && !record["username"].IsNil() {
+			username = record["username"].String()
 		}
+
+		userId := int64(0)
+		if record["user_id"] != nil && !record["user_id"].IsNil() {
+			userId = record["user_id"].Int64()
+		}
+
+		g.Log().Debug(ctx, "Processed - userId:", userId, "username:", username)
+
+		// Make sure the struct field names match exactly
+		item := entity.VehicleItem{
+			Id:           record["id"].Int64(),
+			UserId:       userId,   // This should be mapped correctly
+			Username:     username, // This should be mapped correctly
+			LicensePlate: record["license_plate"].String(),
+			Brand:        record["brand"].String(),
+			Model:        record["model"].String(),
+			Color:        record["color"].String(),
+			Type:         record["type"].String(),
+			CreatedAt:    record["created_at"].Time().Format("2006-01-02 15:04:05"),
+		}
+
+		// Add this debug log to see what's in the item
+		g.Log().Debug(ctx, "Created item:", item)
+
 		list = append(list, item)
 	}
 
+	// Add this debug log to see the final list
+	g.Log().Debug(ctx, "Final list before return:", list)
 	return &entity.VehicleListRes{
 		List:  list,
 		Total: total,

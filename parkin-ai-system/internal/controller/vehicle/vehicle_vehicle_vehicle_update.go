@@ -31,6 +31,8 @@ func (c *ControllerVehicle) VehicleUpdate(ctx context.Context, req *vehicle.Vehi
 	res = &vehicle.VehicleUpdateRes{
 		Vehicle: vehicle.VehicleItem{
 			Id:           updateRes.Id,
+			UserId:       updateRes.UserId,
+			Username:     updateRes.Username,
 			LicensePlate: updateRes.LicensePlate,
 			Brand:        updateRes.Brand,
 			Model:        updateRes.Model,

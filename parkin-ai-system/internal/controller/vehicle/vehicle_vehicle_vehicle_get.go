@@ -26,6 +26,8 @@ func (c *ControllerVehicle) VehicleGet(ctx context.Context, req *vehicle.Vehicle
 	res = &vehicle.VehicleGetRes{
 		Vehicle: vehicle.VehicleItem{
 			Id:           veh.Id,
+			UserId:       veh.UserId,
+			Username:     veh.Username,
 			LicensePlate: veh.LicensePlate,
 			Brand:        veh.Brand,
 			Model:        veh.Model,

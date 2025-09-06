@@ -37,7 +37,7 @@ func (s *sParkingSlot) ParkingSlotAdd(ctx context.Context, req *entity.ParkingSl
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
-	if gconv.String(user.Map()["role"]) != "admin" {
+	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can add parking slots")
 	}
 

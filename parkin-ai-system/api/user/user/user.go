@@ -9,8 +9,8 @@ type UserRegisterReq struct {
 	Username  string `json:"username" v:"required|length:3,50#Username is required|Username must be 3-50 characters"`
 	Password  string `json:"password" v:"required|length:6,50#Password is required|Password must be 6-50 characters"`
 	FullName  string `json:"full_name" v:"length:0,100#Full name must be 0-100 characters"`
-	Email     string `json:"email" v:"required|email#Email is required|Invalid email format"`
-	Phone     string `json:"phone" v:"required|phone#Phone is required|Invalid phone format"`
+	Email     string `json:"email"`
+	Phone     string `json:"phone"`
 	Gender    string `json:"gender" v:"length:0,20#Gender must be 0-20 characters"`
 	BirthDate string `json:"birth_date" v:"length:0,10|regex:^[0-9]{4}-[0-9]{2}-[0-9]{2}$#Birth date must be 0-10 characters|Invalid date format (YYYY-MM-DD)"`
 	AvatarUrl string `json:"avatar_url" v:"url|length:0,255#Invalid URL format|Avatar URL must be 0-255 characters"`
@@ -103,8 +103,8 @@ type UserUpdateProfileReq struct {
 	Username  string `json:"username" v:"length:3,50#Username must be 3-50 characters"`
 	Password  string `json:"password" v:"length:6,50#Password must be 6-50 characters"`
 	FullName  string `json:"full_name" v:"length:0,100#Full name must be 0-100 characters"`
-	Email     string `json:"email" v:"email#Invalid email format"`
-	Phone     string `json:"phone" v:"phone#Invalid phone format"`
+	Email     string `json:"email"`
+	Phone     string `json:"phone"`
 	Gender    string `json:"gender" v:"length:0,20#Gender must be 0-20 characters"`
 	BirthDate string `json:"birth_date" v:"length:0,10|regex:^[0-9]{4}-[0-9]{2}-[0-9]{2}$#Birth date must be 0-10 characters|Invalid date format (YYYY-MM-DD)"`
 	AvatarUrl string `json:"avatar_url" v:"url|length:0,255#Invalid URL format|Avatar URL must be 0-255 characters"`

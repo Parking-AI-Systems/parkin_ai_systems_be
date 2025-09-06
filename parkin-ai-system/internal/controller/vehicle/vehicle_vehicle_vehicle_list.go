@@ -32,6 +32,8 @@ func (c *ControllerVehicle) VehicleList(ctx context.Context, req *vehicle.Vehicl
 	for _, item := range listRes.List {
 		res.List = append(res.List, vehicle.VehicleItem{
 			Id:           item.Id,
+			UserId:       item.UserId,
+			Username:     item.Username,
 			LicensePlate: item.LicensePlate,
 			Brand:        item.Brand,
 			Model:        item.Model,
