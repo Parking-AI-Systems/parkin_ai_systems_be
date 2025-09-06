@@ -1,63 +1,19 @@
+// =================================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+// =================================================================================
+
 package parking_lot_review
 
 import (
-	"github.com/gogf/gf/v2/frame/g"
+	"context"
+
+	"parkin-ai-system/api/parking_lot_review/parking_lot_review"
 )
 
-type ParkingLotReviewAddReq struct {
-	g.Meta   `path:"/parking-lot-reviews" method:"post" tags:"ParkingLotReview" summary:"Thêm đánh giá bãi xe" security:"BearerAuth"`
-	LotId    int64  `json:"lot_id" v:"required"`
-	Rating   int    `json:"rating" v:"required|min:1|max:5"`
-	Comment  string `json:"comment"`
-}
-
-type ParkingLotReviewAddRes struct {
-	ReviewId int64 `json:"review_id"`
-}
-
-type ParkingLotReviewUpdateReq struct {
-	g.Meta   `path:"/parking-lot-reviews/{id}" method:"put" tags:"ParkingLotReview" summary:"Cập nhật đánh giá bãi xe" security:"BearerAuth"`
-	Id       int64  `json:"id" v:"required"`
-	Rating   int    `json:"rating" v:"min:1|max:5"`
-	Comment  string `json:"comment"`
-}
-
-type ParkingLotReviewUpdateRes struct {
-	Success bool `json:"success"`
-}
-
-type ParkingLotReviewDeleteReq struct {
-	g.Meta   `path:"/parking-lot-reviews/{id}" method:"delete" tags:"ParkingLotReview" summary:"Xoá đánh giá bãi xe" security:"BearerAuth"`
-	Id       int64  `json:"id" v:"required"`
-}
-
-type ParkingLotReviewDeleteRes struct {
-	Success bool `json:"success"`
-}
-
-type ParkingLotReviewDetailReq struct {
-	g.Meta   `path:"/parking-lot-reviews/{id}" method:"get" tags:"ParkingLotReview" summary:"Chi tiết đánh giá bãi xe" security:"BearerAuth"`
-	Id       int64  `json:"id" v:"required"`
-}
-
-type ParkingLotReviewDetailRes struct {
-	Review *ParkingLotReviewInfo `json:"review"`
-}
-
-type ParkingLotReviewListReq struct {
-	g.Meta   `path:"/parking-lot-reviews" method:"get" tags:"ParkingLotReview" summary:"Danh sách đánh giá bãi xe" security:"BearerAuth"`
-	LotId    int64  `json:"lot_id"`
-}
-
-type ParkingLotReviewListRes struct {
-	Reviews []ParkingLotReviewInfo `json:"reviews"`
-}
-
-type ParkingLotReviewInfo struct {
-	Id        int64  `json:"id"`
-	LotId     int64  `json:"lot_id"`
-	UserId    int64  `json:"user_id"`
-	Rating    int    `json:"rating"`
-	Comment   string `json:"comment"`
-	CreatedAt string `json:"created_at"`
+type IParkingLotReviewParking_lot_review interface {
+	ParkingLotReviewAdd(ctx context.Context, req *parking_lot_review.ParkingLotReviewAddReq) (res *parking_lot_review.ParkingLotReviewAddRes, err error)
+	ParkingLotReviewList(ctx context.Context, req *parking_lot_review.ParkingLotReviewListReq) (res *parking_lot_review.ParkingLotReviewListRes, err error)
+	ParkingLotReviewGet(ctx context.Context, req *parking_lot_review.ParkingLotReviewGetReq) (res *parking_lot_review.ParkingLotReviewGetRes, err error)
+	ParkingLotReviewUpdate(ctx context.Context, req *parking_lot_review.ParkingLotReviewUpdateReq) (res *parking_lot_review.ParkingLotReviewUpdateRes, err error)
+	ParkingLotReviewDelete(ctx context.Context, req *parking_lot_review.ParkingLotReviewDeleteReq) (res *parking_lot_review.ParkingLotReviewDeleteRes, err error)
 }

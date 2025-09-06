@@ -1,19 +1,28 @@
+// ================================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+// You can delete these comments if you wish manually maintain this interface file.
+// ================================================================================
+
 package service
 
 import (
 	"context"
-	"parkin-ai-system/api/parking_lot_review"
+	"parkin-ai-system/internal/model/entity"
 )
 
-type IParkingLotReview interface {
-	ParkingLotReviewAdd(ctx context.Context, req *parking_lot_review.ParkingLotReviewAddReq) (res *parking_lot_review.ParkingLotReviewAddRes, err error)
-	ParkingLotReviewUpdate(ctx context.Context, req *parking_lot_review.ParkingLotReviewUpdateReq) (res *parking_lot_review.ParkingLotReviewUpdateRes, err error)
-	ParkingLotReviewDelete(ctx context.Context, req *parking_lot_review.ParkingLotReviewDeleteReq) (res *parking_lot_review.ParkingLotReviewDeleteRes, err error)
-	ParkingLotReviewDetail(ctx context.Context, req *parking_lot_review.ParkingLotReviewDetailReq) (res *parking_lot_review.ParkingLotReviewDetailRes, err error)
-	ParkingLotReviewList(ctx context.Context, req *parking_lot_review.ParkingLotReviewListReq) (res *parking_lot_review.ParkingLotReviewListRes, err error)
-}
+type (
+	IParkingLotReview interface {
+		ParkingLotReviewAdd(ctx context.Context, req *entity.ParkingLotReviewAddReq) (*entity.ParkingLotReviewAddRes, error)
+		ParkingLotReviewList(ctx context.Context, req *entity.ParkingLotReviewListReq) (*entity.ParkingLotReviewListRes, error)
+		ParkingLotReviewGet(ctx context.Context, req *entity.ParkingLotReviewGetReq) (*entity.ParkingLotReviewItem, error)
+		ParkingLotReviewUpdate(ctx context.Context, req *entity.ParkingLotReviewUpdateReq) (*entity.ParkingLotReviewItem, error)
+		ParkingLotReviewDelete(ctx context.Context, req *entity.ParkingLotReviewDeleteReq) (*entity.ParkingLotReviewDeleteRes, error)
+	}
+)
 
-var localParkingLotReview IParkingLotReview
+var (
+	localParkingLotReview IParkingLotReview
+)
 
 func ParkingLotReview() IParkingLotReview {
 	if localParkingLotReview == nil {

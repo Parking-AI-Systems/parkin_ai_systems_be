@@ -3,13 +3,3 @@
 // =================================================================================
 
 package parking_lot_review
-
-import (
-	"parkin-ai-system/api/parking_lot_review"
-)
-
-type ControllerParking_lot_review struct{}
-
-func NewParking_lot_review() parking_lot_review.IParkingLotReviewParking_lot_review {
-	return &ControllerParking_lot_review{}
-}
