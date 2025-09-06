@@ -39,8 +39,13 @@ type ParkingLotAddReq struct {
 	Address      string               `json:"address"`
 	Latitude     float64              `json:"latitude"`
 	Longitude    float64              `json:"longitude"`
+	IsVerified   bool                 `json:"isVerified"`
+	IsActive     bool                 `json:"isActive"`
 	TotalSlots   int                  `json:"totalSlots"`
 	PricePerHour float64              `json:"pricePerHour"`
+	Description  string               `json:"description"`
+	OpenTime     *gtime.Time          `json:"openTime"`
+	CloseTime    *gtime.Time          `json:"closeTime"`
 	Images       []ParkingLotImageInput `json:"images"`
 }
 
@@ -52,6 +57,7 @@ type ParkingLotListReq struct {
 	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
 	Radius    float64 `json:"radius"`
+	IsActive  bool    `json:"isActive"`
 	Page      int     `json:"page"`
 	PageSize  int     `json:"pageSize"`
 }
@@ -72,9 +78,15 @@ type ParkingLotItem struct {
 	Address       string               `json:"address"`
 	Latitude      float64              `json:"latitude"`
 	Longitude     float64              `json:"longitude"`
+	OwnerId       int64                `json:"owner_id"`
+	IsVerified    bool                 `json:"is_verified"`
+	IsActive      bool                 `json:"is_active"`
 	TotalSlots    int                  `json:"total_slots"`
 	AvailableSlots int                  `json:"available_slots"`
 	PricePerHour  float64              `json:"price_per_hour"`
+	Description   string               `json:"description"`
+	OpenTime      string               `json:"open_time"`
+	CloseTime     string               `json:"close_time"`
 	Images        []ParkingLotImageItem `json:"images"`
 	CreatedAt     string               `json:"created_at"`
 	UpdatedAt     string               `json:"updated_at"`
@@ -94,13 +106,19 @@ type ParkingLotGetRes struct {
 }
 
 type ParkingLotUpdateReq struct {
-	Id           int64   `json:"id"`
-	Name         string  `json:"name"`
-	Address      string  `json:"address"`
-	Latitude     float64 `json:"latitude"`
-	Longitude    float64 `json:"longitude"`
-	TotalSlots   int     `json:"totalSlots"`
-	PricePerHour float64 `json:"pricePerHour"`
+	Id           int64       `json:"id"`
+	Name         string      `json:"name"`
+	Address      string      `json:"address"`
+	Latitude     float64     `json:"latitude"`
+	Longitude    float64     `json:"longitude"`
+	IsVerified   *bool       `json:"is_verified"`
+	IsActive     *bool       `json:"is_active"`
+	TotalSlots   int         `json:"total_slots"`
+	PricePerHour float64     `json:"price_per_hour"`
+	Description  string      `json:"description"`
+	OpenTime     *gtime.Time `json:"open_time"`
+	CloseTime    *gtime.Time `json:"close_time"`
+	ImageUrl     string      `json:"image_url"`
 }
 
 type ParkingLotUpdateRes struct {

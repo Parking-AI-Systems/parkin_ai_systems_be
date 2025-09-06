@@ -28,16 +28,23 @@ func (c *ControllerParking_lot) ParkingLotGet(ctx context.Context, req *parking_
 }
 func entityToApiParkingLotItem(item *entity.ParkingLotItem) parking_lot.ParkingLotItem {
 	apiItem := parking_lot.ParkingLotItem{
-		Id:           item.Id,
-		Name:         item.Name,
-		Address:      item.Address,
-		Latitude:     item.Latitude,
-		Longitude:    item.Longitude,
-		TotalSlots:   item.TotalSlots,
-		PricePerHour: item.PricePerHour,
-		CreatedAt:    item.CreatedAt,
-		UpdatedAt:    item.UpdatedAt,
-		Images:       make([]parking_lot.ParkingLotImageItem, len(item.Images)),
+		Id:             item.Id,
+		Name:           item.Name,
+		Address:        item.Address,
+		Latitude:       item.Latitude,
+		Longitude:      item.Longitude,
+		OwnerId:        item.OwnerId,
+		IsVerified:     item.IsVerified,
+		IsActive:       item.IsActive,
+		AvailableSlots: item.AvailableSlots,
+		TotalSlots:     item.TotalSlots,
+		PricePerHour:   item.PricePerHour,
+		Description:    item.Description,
+		OpenTime:       item.OpenTime,
+		CloseTime:      item.CloseTime,
+		CreatedAt:      item.CreatedAt,
+		UpdatedAt:      item.UpdatedAt,
+		Images:         make([]parking_lot.ParkingLotImageItem, len(item.Images)),
 	}
 	for i, img := range item.Images {
 		apiItem.Images[i] = parking_lot.ParkingLotImageItem{

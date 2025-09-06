@@ -16,8 +16,13 @@ func (c *ControllerParking_lot) ParkingLotUpdate(ctx context.Context, req *parki
 		Address:      req.Address,
 		Latitude:     req.Latitude,
 		Longitude:    req.Longitude,
+		IsVerified:   req.IsVerified,
+		IsActive:     req.IsActive,
 		TotalSlots:   req.TotalSlots,
 		PricePerHour: req.PricePerHour,
+		Description:  req.Description,
+		OpenTime:     req.OpenTime,
+		CloseTime:    req.CloseTime,
 	}
 
 	// Call service

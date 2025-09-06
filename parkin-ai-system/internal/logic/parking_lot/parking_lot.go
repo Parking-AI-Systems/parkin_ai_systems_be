@@ -55,6 +55,13 @@ func (s *sParkingLot) ParkingLotAdd(ctx context.Context, req *entity.ParkingLotA
 	if req.Latitude == 0 || req.Longitude == 0 {
 		return nil, gerror.NewCode(consts.CodeInvalidInput, "Valid latitude and longitude are required")
 	}
+
+	if req.OpenTime == nil || req.CloseTime == nil {
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Open time and close time are required")
+	}
+	if req.CloseTime.Before(req.OpenTime) {
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Close time must be after open time")
+	}
 	for _, img := range req.Images {
 		if img.ImageUrl == "" {
 			return nil, gerror.NewCode(consts.CodeInvalidInput, "Image URL is required for all images")
@@ -76,9 +83,15 @@ func (s *sParkingLot) ParkingLotAdd(ctx context.Context, req *entity.ParkingLotA
 		Address:        req.Address,
 		Latitude:       req.Latitude,
 		Longitude:      req.Longitude,
+		OwnerId:        gconv.Int64(userID),
+		IsVerified:     req.IsVerified,
+		IsActive:       req.IsActive,
 		TotalSlots:     req.TotalSlots,
 		AvailableSlots: req.TotalSlots,
 		PricePerHour:   req.PricePerHour,
+		Description:    req.Description,
+		OpenTime:       req.OpenTime,
+		CloseTime:      req.CloseTime,
 		CreatedAt:      gtime.Now(),
 	}
 	lastId, err := dao.ParkingLots.Ctx(ctx).TX(tx).Data(data).InsertAndGetId()
@@ -88,10 +101,9 @@ func (s *sParkingLot) ParkingLotAdd(ctx context.Context, req *entity.ParkingLotA
 
 	for _, img := range req.Images {
 		imgData := do.ParkingLotImages{
-			LotId:      lastId,
-			ImageUrl:   img.ImageUrl,
-			UploadedBy: gconv.Int64(userID),
-			CreatedAt:  gtime.Now(),
+			LotId:     lastId,
+			ImageUrl:  img.ImageUrl,
+			CreatedAt: gtime.Now(),
 		}
 		_, err = dao.ParkingLotImages.Ctx(ctx).TX(tx).Data(imgData).Insert()
 		if err != nil {
@@ -135,6 +147,9 @@ func (s *sParkingLot) ParkingLotList(ctx context.Context, req *entity.ParkingLot
 	}
 
 	m := dao.ParkingLots.Ctx(ctx).Where("deleted_at IS NULL")
+	if req.IsActive {
+		m = m.Where("is_active", true)
+	}
 
 	if req.Latitude != 0 && req.Longitude != 0 && req.Radius > 0 {
 		latDelta := req.Radius / 111.0
@@ -188,9 +203,15 @@ func (s *sParkingLot) ParkingLotList(ctx context.Context, req *entity.ParkingLot
 			Address:        lot.Address,
 			Latitude:       lot.Latitude,
 			Longitude:      lot.Longitude,
+			OwnerId:        lot.OwnerId,
+			IsVerified:     lot.IsVerified,
+			IsActive:       lot.IsActive,
 			TotalSlots:     lot.TotalSlots,
 			AvailableSlots: lot.AvailableSlots,
 			PricePerHour:   lot.PricePerHour,
+			Description:    lot.Description,
+			OpenTime:       lot.OpenTime.Format("15:04:05"),
+			CloseTime:      lot.CloseTime.Format("15:04:05"),
 			Images:         imageItems,
 			CreatedAt:      lot.CreatedAt.Format("2006-01-02 15:04:05"),
 		}
@@ -253,9 +274,15 @@ func (s *sParkingLot) ParkingLotGet(ctx context.Context, req *entity.ParkingLotG
 		Address:        lot.Address,
 		Latitude:       lot.Latitude,
 		Longitude:      lot.Longitude,
+		OwnerId:        lot.OwnerId,
+		IsVerified:     lot.IsVerified,
+		IsActive:       lot.IsActive,
 		TotalSlots:     lot.TotalSlots,
 		AvailableSlots: lot.AvailableSlots,
 		PricePerHour:   lot.PricePerHour,
+		Description:    lot.Description,
+		OpenTime:       lot.OpenTime.Format("15:04:05"),
+		CloseTime:      lot.CloseTime.Format("15:04:05"),
 		Images:         imageItems,
 		CreatedAt:      lot.CreatedAt.Format("2006-01-02 15:04:05"),
 	}
@@ -291,6 +318,10 @@ func (s *sParkingLot) ParkingLotUpdate(ctx context.Context, req *entity.ParkingL
 		return nil, gerror.NewCode(consts.CodeNotFound, "Parking lot not found")
 	}
 
+	if req.CloseTime != nil && req.OpenTime != nil && req.CloseTime.Before(req.OpenTime) {
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Close time must be after open time")
+	}
+
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
@@ -316,6 +347,12 @@ func (s *sParkingLot) ParkingLotUpdate(ctx context.Context, req *entity.ParkingL
 	if req.Longitude != 0 {
 		updateData["longitude"] = req.Longitude
 	}
+	if req.IsVerified != nil {
+		updateData["is_verified"] = req.IsVerified
+	}
+	if req.IsActive != nil {
+		updateData["is_active"] = req.IsActive
+	}
 	if req.TotalSlots > 0 {
 		currentAvailable := gconv.Int(lot.Map()["available_slots"])
 		currentTotal := gconv.Int(lot.Map()["total_slots"])
@@ -327,6 +364,18 @@ func (s *sParkingLot) ParkingLotUpdate(ctx context.Context, req *entity.ParkingL
 	}
 	if req.PricePerHour > 0 {
 		updateData["price_per_hour"] = req.PricePerHour
+	}
+	if req.Description != "" {
+		updateData["description"] = req.Description
+	}
+	if req.OpenTime != nil {
+		updateData["open_time"] = req.OpenTime
+	}
+	if req.CloseTime != nil {
+		updateData["close_time"] = req.CloseTime
+	}
+	if req.ImageUrl != "" {
+		updateData["image_url"] = req.ImageUrl
 	}
 
 	_, err = dao.ParkingLots.Ctx(ctx).TX(tx).Data(updateData).Where("id", req.Id).Update()
@@ -382,9 +431,14 @@ func (s *sParkingLot) ParkingLotUpdate(ctx context.Context, req *entity.ParkingL
 		Address:        updatedLot.Address,
 		Latitude:       updatedLot.Latitude,
 		Longitude:      updatedLot.Longitude,
+		IsVerified:     updatedLot.IsVerified,
+		IsActive:       updatedLot.IsActive,
 		TotalSlots:     updatedLot.TotalSlots,
 		AvailableSlots: updatedLot.AvailableSlots,
 		PricePerHour:   updatedLot.PricePerHour,
+		Description:    updatedLot.Description,
+		OpenTime:       updatedLot.OpenTime.Format("15:04:05"),
+		CloseTime:      updatedLot.CloseTime.Format("15:04:05"),
 		Images:         imageItems,
 		CreatedAt:      updatedLot.CreatedAt.Format("2006-01-02 15:04:05"),
 	}
