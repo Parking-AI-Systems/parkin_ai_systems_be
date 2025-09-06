@@ -31,6 +31,7 @@ func (c *ControllerParking_slot) ParkingSlotUpdate(ctx context.Context, req *par
 		Slot: parking_slot.ParkingSlotItem{
 			Id:          updateRes.Id,
 			LotId:       updateRes.LotId,
+			LotName:     updateRes.LotName,
 			Code:        updateRes.Code,
 			IsAvailable: updateRes.IsAvailable,
 			SlotType:    updateRes.SlotType,

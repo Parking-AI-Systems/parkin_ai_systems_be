@@ -140,22 +140,22 @@ func (s *sParkingSlot) ParkingSlotList(ctx context.Context, req *entity.ParkingS
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
 
-	m := dao.ParkingSlots.Ctx(ctx).
-		Fields("parking_slots.*, parking_lots.name as lot_name").
-		LeftJoin("parking_lots", "parking_lots.id = parking_slots.lot_id").
-		Where("parking_lots.deleted_at IS NULL")
+	// Build base query conditions
+	baseQuery := dao.ParkingSlots.Ctx(ctx).
+		LeftJoin("parking_lots", "parking_lots.id = parking_slots.lot_id")
 
 	if req.LotId != 0 {
-		m = m.Where("parking_slots.lot_id", req.LotId)
+		baseQuery = baseQuery.Where("parking_slots.lot_id", req.LotId)
 	}
 	if req.IsAvailable != nil {
-		m = m.Where("parking_slots.is_available", *req.IsAvailable)
+		baseQuery = baseQuery.Where("parking_slots.is_available", *req.IsAvailable)
 	}
 	if req.SlotType != "" {
-		m = m.Where("parking_slots.slot_type", req.SlotType)
+		baseQuery = baseQuery.Where("parking_slots.slot_type", req.SlotType)
 	}
 
-	total, err := m.Count()
+	// Count query - use simple field
+	total, err := baseQuery.Fields("parking_slots.id").Count()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error counting parking slots")
 	}
@@ -166,13 +166,15 @@ func (s *sParkingSlot) ParkingSlotList(ctx context.Context, req *entity.ParkingS
 	if req.PageSize <= 0 {
 		req.PageSize = 10
 	}
-	m = m.Limit(req.PageSize).Offset((req.Page - 1) * req.PageSize)
 
+	// Data query - use joined fields
 	var slots []struct {
 		entity.ParkingSlots
 		LotName string `json:"lot_name"`
 	}
-	err = m.Order("parking_slots.id DESC").Scan(&slots)
+	err = baseQuery.Fields("parking_slots.*, parking_lots.name as lot_name").
+		Limit(req.PageSize).Offset((req.Page - 1) * req.PageSize).
+		Order("parking_slots.id DESC").Scan(&slots)
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving parking slots")
 	}
@@ -220,7 +222,6 @@ func (s *sParkingSlot) ParkingSlotGet(ctx context.Context, req *entity.ParkingSl
 		Fields("parking_slots.*, parking_lots.name as lot_name").
 		LeftJoin("parking_lots", "parking_lots.id = parking_slots.lot_id").
 		Where("parking_slots.id", req.Id).
-		Where("parking_lots.deleted_at IS NULL").
 		Scan(&slot)
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving parking slot")
@@ -256,7 +257,7 @@ func (s *sParkingSlot) ParkingSlotUpdate(ctx context.Context, req *entity.Parkin
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
-	if gconv.String(user.Map()["role"]) != "admin" {
+	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can update parking slots")
 	}
 
@@ -409,7 +410,7 @@ func (s *sParkingSlot) ParkingSlotDelete(ctx context.Context, req *entity.Parkin
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
-	if gconv.String(user.Map()["role"]) != "admin" {
+	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can delete parking slots")
 	}
 
