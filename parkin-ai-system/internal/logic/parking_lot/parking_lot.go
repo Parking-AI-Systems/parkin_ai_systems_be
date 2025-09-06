@@ -35,11 +35,6 @@ func (s *sParkingLot) ParkingLotAdd(ctx context.Context, req *entity.ParkingLotA
 	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
-	// Delete related parking slots first
-	_, err = dao.ParkingSlots.Ctx(ctx).TX(tx).Where("lot_id", req.Id).Delete()
-	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting related parking slots")
-	}
 	}
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
@@ -82,30 +77,6 @@ func (s *sParkingLot) ParkingLotAdd(ctx context.Context, req *entity.ParkingLotA
 			tx.Rollback()
 		}
 	}()
-
-	// Delete related parking slots first
-	_, err = dao.ParkingSlots.Ctx(ctx).TX(tx).Where("lot_id", req.Id).Delete()
-	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting related parking slots")
-	}
-
-	// Delete related parking slots first
-	_, err = dao.ParkingSlots.Ctx(ctx).TX(tx).Where("lot_id", req.Id).Delete()
-	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting related parking slots")
-	}
-
-	// Delete related parking slots first
-	_, err = dao.ParkingSlots.Ctx(ctx).TX(tx).Where("lot_id", req.Id).Delete()
-	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting related parking slots")
-	}
-
-	// Delete related parking slots first
-	_, err = dao.ParkingSlots.Ctx(ctx).TX(tx).Where("lot_id", req.Id).Delete()
-	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting related parking slots")
-	}
 
 	data := do.ParkingLots{
 		Name:           req.Name,
