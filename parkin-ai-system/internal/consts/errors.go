@@ -46,6 +46,7 @@ var (
 	CodeFavoriteNotFound    = customCode{code: 1003, message: "Favorite not found", detail: nil, httpStatus: http.StatusNotFound}
 	CodeNotFound            = customCode{code: 1004, message: "Not found", detail: nil, httpStatus: http.StatusNotFound}
 	CodeServiceNotFound     = customCode{code: 1101, message: "Service not found", detail: nil, httpStatus: http.StatusNotFound}
+	CodeInvalidOperation    = customCode{code: 1201, message: "Invalid operation", detail: nil, httpStatus: http.StatusBadRequest}
 )
 
 type customCode struct {

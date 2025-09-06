@@ -6,15 +6,17 @@
 package service
 
 import (
-	"parkin-ai-system/api/parking_slot"
+	"context"
+	"parkin-ai-system/internal/model/entity"
 )
 
 type (
 	IParkingSlot interface {
-		ParkingSlotAdd(req *parking_slot.ParkingSlotAddReq) (*parking_slot.ParkingSlotAddRes, error)
-		ParkingSlotList(req *parking_slot.ParkingSlotListReq) (*parking_slot.ParkingSlotListRes, error)
-		ParkingSlotUpdate(req *parking_slot.ParkingSlotUpdateReq) (*parking_slot.ParkingSlotUpdateRes, error)
-		ParkingSlotDelete(req *parking_slot.ParkingSlotDeleteReq) (*parking_slot.ParkingSlotDeleteRes, error)
+		ParkingSlotAdd(ctx context.Context, req *entity.ParkingSlotAddReq) (*entity.ParkingSlotAddRes, error)
+		ParkingSlotList(ctx context.Context, req *entity.ParkingSlotListReq) (*entity.ParkingSlotListRes, error)
+		ParkingSlotGet(ctx context.Context, req *entity.ParkingSlotGetReq) (*entity.ParkingSlotItem, error)
+		ParkingSlotUpdate(ctx context.Context, req *entity.ParkingSlotUpdateReq) (*entity.ParkingSlotItem, error)
+		ParkingSlotDelete(ctx context.Context, req *entity.ParkingSlotDeleteReq) (*entity.ParkingSlotDeleteRes, error)
 	}
 )
 

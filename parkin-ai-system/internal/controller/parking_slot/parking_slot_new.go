@@ -3,3 +3,13 @@
 // =================================================================================
 
 package parking_slot
+
+import (
+	"parkin-ai-system/api/parking_slot"
+)
+
+type ControllerParking_slot struct{}
+
+func NewParking_slot() parking_slot.IParkingSlotParking_slot {
+	return &ControllerParking_slot{}
+}

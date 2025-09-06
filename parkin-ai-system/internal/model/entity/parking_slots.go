@@ -18,3 +18,68 @@ type ParkingSlots struct {
 	Floor       string      `json:"floor"       orm:"floor"        description:""`
 	CreatedAt   *gtime.Time `json:"createdAt"   orm:"created_at"   description:""`
 }
+
+type ParkingSlotAddReq struct {
+	LotId       int64  `json:"lotId"`
+	Code        string `json:"code"`
+	IsAvailable bool   `json:"isAvailable"`
+	SlotType    string `json:"slotType"`
+	Floor       string `json:"floor"`
+}
+
+type ParkingSlotAddRes struct {
+	Id int64 `json:"id"`
+}
+
+type ParkingSlotListReq struct {
+	LotId       int64  `json:"lotId"`
+	IsAvailable *bool  `json:"isAvailable"`
+	SlotType    string `json:"slotType"`
+	Page        int    `json:"page"`
+	PageSize    int    `json:"pageSize"`
+}
+
+type ParkingSlotItem struct {
+	Id          int64  `json:"id"`
+	LotId       int64  `json:"lot_id"`
+	LotName     string `json:"lot_name"`
+	Code        string `json:"code"`
+	IsAvailable bool   `json:"is_available"`
+	SlotType    string `json:"slot_type"`
+	Floor       string `json:"floor"`
+	CreatedAt   string `json:"created_at"`
+}
+
+type ParkingSlotListRes struct {
+	List  []ParkingSlotItem `json:"list"`
+	Total int               `json:"total"`
+}
+
+type ParkingSlotGetReq struct {
+	Id int64 `json:"id"`
+}
+
+type ParkingSlotGetRes struct {
+	Slot ParkingSlotItem `json:"slot"`
+}
+
+type ParkingSlotUpdateReq struct {
+	Id          int64  `json:"id"`
+	LotId       int64  `json:"lotId"`
+	Code        string `json:"code"`
+	IsAvailable *bool  `json:"isAvailable"`
+	SlotType    string `json:"slotType"`
+	Floor       string `json:"floor"`
+}
+
+type ParkingSlotUpdateRes struct {
+	Slot ParkingSlotItem `json:"slot"`
+}
+
+type ParkingSlotDeleteReq struct {
+	Id int64 `json:"id"`
+}
+
+type ParkingSlotDeleteRes struct {
+	Message string `json:"message"`
+}

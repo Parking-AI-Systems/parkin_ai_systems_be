@@ -7,3 +7,10 @@ const (
 	TokenTypeAccess  = "token_access"
 	TokenTypeRefresh = "token_refresh"
 )
+
+var ValidSlotTypes = []string{
+	"compact",
+	"large",
+	"handicapped",
+	"electric",
+}
