@@ -8,19 +8,21 @@ import (
 	"parkin-ai-system/internal/service"
 )
 
-func (c *ControllerUser) UserLogout(ctx context.Context, req *user.UserLogoutReq) (res *user.UserLogoutRes, err error) {
+func (c *ControllerUser) UserDelete(ctx context.Context, req *user.UserDeleteReq) (res *user.UserDeleteRes, err error) {
 	// Map API request to entity request
-	input := &entity.UserLogoutReq{}
+	input := &entity.UserDeleteReq{
+		UserId: req.UserId,
+	}
 
 	// Call service
-	logoutRes, err := service.User().Logout(ctx, input)
+	deleteRes, err := service.User().DeleteUser(ctx, input)
 	if err != nil {
 		return nil, err
 	}
 
 	// Map entity response to API response
-	res = &user.UserLogoutRes{
-		Message: logoutRes.Message,
+	res = &user.UserDeleteRes{
+		Message: deleteRes.Message,
 	}
 	return res, nil
 }

@@ -8,9 +8,9 @@ import (
 	"parkin-ai-system/internal/service"
 )
 
-func (c *ControllerUser) UserUpdateProfile(ctx context.Context, req *user.UserUpdateProfileReq) (res *user.UserUpdateProfileRes, err error) {
+func (c *ControllerUser) UserRegister(ctx context.Context, req *user.UserRegisterReq) (res *user.UserRegisterRes, err error) {
 	// Map API request to entity request
-	input := &entity.UserUpdateProfileReq{
+	input := &entity.UserRegisterReq{
 		Username:  req.Username,
 		Password:  req.Password,
 		Email:     req.Email,
@@ -22,15 +22,20 @@ func (c *ControllerUser) UserUpdateProfile(ctx context.Context, req *user.UserUp
 	}
 
 	// Call service
-	updateRes, err := service.User().UserUpdateProfile(ctx, input)
+	registerRes, err := service.User().SignUp(ctx, input)
 	if err != nil {
 		return nil, err
 	}
 
 	// Map entity response to API response
-	res = &user.UserUpdateProfileRes{
-		Success: updateRes.Success,
-		Message: updateRes.Message,
+	res = &user.UserRegisterRes{
+		UserId:    registerRes.UserId,
+		Username:  registerRes.Username,
+		Email:     registerRes.Email,
+		Phone:     registerRes.Phone,
+		FullName:  registerRes.FullName,
+		Gender:    registerRes.Gender,
+		BirthDate: registerRes.BirthDate,
 	}
 	return res, nil
 }

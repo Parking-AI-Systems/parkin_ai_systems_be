@@ -11,14 +11,15 @@ import (
 )
 
 type IUserUser interface {
-	GetAllUsers(ctx context.Context, req *user.GetAllUsersReq) (res *user.GetAllUsersRes, err error)
-	DeleteUser(ctx context.Context, req *user.DeleteUserReq) (res *user.DeleteUserRes, err error)
-	UpdateUserRole(ctx context.Context, req *user.UpdateUserRoleReq) (res *user.UpdateUserRoleRes, err error)
-	UserById(ctx context.Context, req *user.UserByIdReq) (res *user.UserByIdRes, err error)
-	RefreshToken(ctx context.Context, req *user.RefreshTokenReq) (res *user.RefreshTokenRes, err error)
+	UserRegister(ctx context.Context, req *user.UserRegisterReq) (res *user.UserRegisterRes, err error)
 	UserLogin(ctx context.Context, req *user.UserLoginReq) (res *user.UserLoginRes, err error)
+	UserRefreshToken(ctx context.Context, req *user.UserRefreshTokenReq) (res *user.UserRefreshTokenRes, err error)
 	UserLogout(ctx context.Context, req *user.UserLogoutReq) (res *user.UserLogoutRes, err error)
 	UserProfile(ctx context.Context, req *user.UserProfileReq) (res *user.UserProfileRes, err error)
-	Register(ctx context.Context, req *user.RegisterReq) (res *user.RegisterRes, err error)
+	UserById(ctx context.Context, req *user.UserByIdReq) (res *user.UserByIdRes, err error)
 	UserUpdateProfile(ctx context.Context, req *user.UserUpdateProfileReq) (res *user.UserUpdateProfileRes, err error)
+	UserList(ctx context.Context, req *user.UserListReq) (res *user.UserListRes, err error)
+	UserDelete(ctx context.Context, req *user.UserDeleteReq) (res *user.UserDeleteRes, err error)
+	UserUpdateRole(ctx context.Context, req *user.UserUpdateRoleReq) (res *user.UserUpdateRoleRes, err error)
+	UserUpdateWalletBalance(ctx context.Context, req *user.UserUpdateWalletBalanceReq) (res *user.UserUpdateWalletBalanceRes, err error)
 }
