@@ -2,17 +2,74 @@ package other_service
 
 import (
 	"context"
-	"parkin-ai-system/api/other_service"
+	"fmt"
+	"parkin-ai-system/internal/consts"
 	"parkin-ai-system/internal/dao"
 	"parkin-ai-system/internal/model/do"
+	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+
+	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
+	"github.com/gogf/gf/v2/util/gconv"
 )
 
-type sOtherService struct{}
+type sOthersService struct{}
 
-func (s *sOtherService) OtherServiceAdd(ctx context.Context, req *other_service.OtherServiceAddReq) (res *other_service.OtherServiceAddRes, err error) {
-	serviceData := do.OthersService{
+func Init() {
+	service.RegisterOthersService(&sOthersService{})
+}
+func init() {
+	Init()
+}
+
+func (s *sOthersService) OthersServiceAdd(ctx context.Context, req *entity.OthersServiceAddReq) (*entity.OthersServiceAddRes, error) {
+	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	if userID == "" {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+	}
+
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+	}
+	if user.IsEmpty() {
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+	}
+	if gconv.String(user.Map()["role"]) != "admin" {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can add services")
+	}
+
+	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).One()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking lot")
+	}
+	if lot.IsEmpty() {
+		return nil, gerror.NewCode(consts.CodeParkingLotNotFound, "Parking lot not found")
+	}
+
+	if req.Name == "" {
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Service name is required")
+	}
+	if req.Price <= 0 {
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Price must be positive")
+	}
+	if req.DurationMinutes <= 0 {
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Duration must be positive")
+	}
+
+	tx, err := g.DB().Begin(ctx)
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	data := do.OthersService{
 		LotId:           req.LotId,
 		Name:            req.Name,
 		Description:     req.Description,
@@ -21,91 +78,342 @@ func (s *sOtherService) OtherServiceAdd(ctx context.Context, req *other_service.
 		IsActive:        req.IsActive,
 		CreatedAt:       gtime.Now(),
 	}
-	result, err := dao.OthersService.Ctx(ctx).Data(serviceData).InsertAndGetId()
+	lastId, err := dao.OthersService.Ctx(ctx).TX(tx).Data(data).InsertAndGetId()
 	if err != nil {
-		return nil, err
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating service")
 	}
-	res = &other_service.OtherServiceAddRes{ServiceId: result}
-	return
+
+	notiData := do.Notifications{
+		UserId:         userID,
+		Type:           "others_service_added",
+		Content:        fmt.Sprintf("Service #%d (%s) for parking lot #%d has been added.", lastId, req.Name, req.LotId),
+		RelatedOrderId: lastId,
+		IsRead:         false,
+		CreatedAt:      gtime.Now(),
+	}
+	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+	}
+
+	return &entity.OthersServiceAddRes{Id: lastId}, nil
 }
 
-func (s *sOtherService) OtherServiceUpdate(ctx context.Context, req *other_service.OtherServiceUpdateReq) (res *other_service.OtherServiceUpdateRes, err error) {
-	data := do.OthersService{
-		Name:            req.Name,
-		Description:     req.Description,
-		Price:           req.Price,
-		DurationMinutes: req.DurationMinutes,
-		IsActive:        req.IsActive,
+func (s *sOthersService) OthersServiceList(ctx context.Context, req *entity.OthersServiceListReq) (*entity.OthersServiceListRes, error) {
+	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	if userID == "" {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
 	}
-	_, err = dao.OthersService.Ctx(ctx).Where("id", req.Id).Data(data).Update()
-	if err != nil {
-		return nil, err
-	}
-	res = &other_service.OtherServiceUpdateRes{Success: true}
-	return
-}
 
-func (s *sOtherService) OtherServiceDelete(ctx context.Context, req *other_service.OtherServiceDeleteReq) (res *other_service.OtherServiceDeleteRes, err error) {
-	_, err = dao.OthersService.Ctx(ctx).Where("id", req.Id).Delete()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
 	if err != nil {
-		return nil, err
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
 	}
-	res = &other_service.OtherServiceDeleteRes{Success: true}
-	return
-}
+	if user.IsEmpty() {
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+	}
 
-func (s *sOtherService) OtherServiceDetail(ctx context.Context, req *other_service.OtherServiceDetailReq) (res *other_service.OtherServiceDetailRes, err error) {
-	serviceRow, err := dao.OthersService.Ctx(ctx).Where("id", req.Id).One()
-	if err != nil {
-		return nil, err
-	}
-	if serviceRow.IsEmpty() {
-		return nil, nil
-	}
-	info := &other_service.OtherServiceInfo{
-		Id:              serviceRow["id"].Int64(),
-		LotId:           serviceRow["lot_id"].Int64(),
-		Name:            serviceRow["name"].String(),
-		Description:     serviceRow["description"].String(),
-		Price:           serviceRow["price"].Float64(),
-		DurationMinutes: serviceRow["duration_minutes"].Int(),
-		IsActive:        serviceRow["is_active"].Bool(),
-		CreatedAt:       serviceRow["created_at"].GTime().Format("Y-m-d H:i:s"),
-	}
-	res = &other_service.OtherServiceDetailRes{Service: info}
-	return
-}
+	m := dao.OthersService.Ctx(ctx).
+		Fields("others_service.*, parking_lots.name as lot_name").
+		LeftJoin("parking_lots", "parking_lots.id = others_service.lot_id").
+		Where("parking_lots.deleted_at IS NULL")
 
-func (s *sOtherService) OtherServiceList(ctx context.Context, req *other_service.OtherServiceListReq) (res *other_service.OtherServiceListRes, err error) {
-	m := dao.OthersService.Ctx(ctx)
 	if req.LotId != 0 {
-		m = m.Where("lot_id", req.LotId)
+		m = m.Where("others_service.lot_id", req.LotId)
 	}
-	all, err := m.All()
+	if req.IsActive {
+		m = m.Where("others_service.is_active", true)
+	}
+
+	total, err := m.Count()
 	if err != nil {
-		return nil, err
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error counting services")
 	}
-	services := make([]other_service.OtherServiceInfo, 0, len(all))
-	for _, r := range all {
-		services = append(services, other_service.OtherServiceInfo{
-			Id:              r["id"].Int64(),
-			LotId:           r["lot_id"].Int64(),
-			Name:            r["name"].String(),
-			Description:     r["description"].String(),
-			Price:           r["price"].Float64(),
-			DurationMinutes: r["duration_minutes"].Int(),
-			IsActive:        r["is_active"].Bool(),
-			CreatedAt:       r["created_at"].GTime().Format("Y-m-d H:i:s"),
-		})
+
+	if req.Page <= 0 {
+		req.Page = 1
 	}
-	res = &other_service.OtherServiceListRes{Services: services}
-	return
+	if req.PageSize <= 0 {
+		req.PageSize = 10
+	}
+	m = m.Limit(req.PageSize).Offset((req.Page - 1) * req.PageSize)
+
+	var services []struct {
+		entity.OthersService
+		LotName string `json:"lot_name"`
+	}
+	err = m.Order("others_service.id DESC").Scan(&services)
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving services")
+	}
+
+	list := make([]entity.OthersServiceItem, 0, len(services))
+	for _, svc := range services {
+		item := entity.OthersServiceItem{
+			Id:              svc.Id,
+			LotId:           svc.LotId,
+			LotName:         svc.LotName,
+			Name:            svc.Name,
+			Description:     svc.Description,
+			Price:           svc.Price,
+			DurationMinutes: svc.DurationMinutes,
+			IsActive:        svc.IsActive,
+			CreatedAt:       svc.CreatedAt.Format("2006-01-02 15:04:05"),
+		}
+		list = append(list, item)
+	}
+
+	return &entity.OthersServiceListRes{
+		List:  list,
+		Total: total,
+	}, nil
 }
 
-func InitOtherService() {
-	service.RegisterOtherService(&sOtherService{})
+func (s *sOthersService) OthersServiceGet(ctx context.Context, req *entity.OthersServiceGetReq) (*entity.OthersServiceItem, error) {
+	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	if userID == "" {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+	}
+
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+	}
+	if user.IsEmpty() {
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+	}
+
+	var svc struct {
+		entity.OthersService
+		LotName string `json:"lot_name"`
+	}
+	err = dao.OthersService.Ctx(ctx).
+		Fields("others_service.*, parking_lots.name as lot_name").
+		LeftJoin("parking_lots", "parking_lots.id = others_service.lot_id").
+		Where("others_service.id", req.Id).
+		Where("parking_lots.deleted_at IS NULL").
+		Scan(&svc)
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving service")
+	}
+	if svc.Id == 0 {
+		return nil, gerror.NewCode(consts.CodeNotFound, "Service not found")
+	}
+
+	item := entity.OthersServiceItem{
+		Id:              svc.Id,
+		LotId:           svc.LotId,
+		LotName:         svc.LotName,
+		Name:            svc.Name,
+		Description:     svc.Description,
+		Price:           svc.Price,
+		DurationMinutes: svc.DurationMinutes,
+		IsActive:        svc.IsActive,
+		CreatedAt:       svc.CreatedAt.Format("2006-01-02 15:04:05"),
+	}
+
+	return &item, nil
 }
 
-func init() {
-	InitOtherService()
+func (s *sOthersService) OthersServiceUpdate(ctx context.Context, req *entity.OthersServiceUpdateReq) (*entity.OthersServiceItem, error) {
+	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	if userID == "" {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+	}
+
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+	}
+	if user.IsEmpty() {
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+	}
+	if gconv.String(user.Map()["role"]) != "admin" {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can update services")
+	}
+
+	svc, err := dao.OthersService.Ctx(ctx).Where("id", req.Id).One()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking service")
+	}
+	if svc.IsEmpty() {
+		return nil, gerror.NewCode(consts.CodeNotFound, "Service not found")
+	}
+
+	if req.LotId != 0 {
+		lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).One()
+		if err != nil {
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking lot")
+		}
+		if lot.IsEmpty() {
+			return nil, gerror.NewCode(consts.CodeParkingLotNotFound, "Parking lot not found")
+		}
+	}
+
+	if req.Name != "" && req.Name == "" {
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Service name cannot be empty")
+	}
+	if req.Price < 0 {
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Price must be non-negative")
+	}
+	if req.DurationMinutes < 0 {
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Duration must be non-negative")
+	}
+
+	tx, err := g.DB().Begin(ctx)
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	updateData := g.Map{}
+	if req.LotId != 0 {
+		updateData["lot_id"] = req.LotId
+	}
+	if req.Name != "" {
+		updateData["name"] = req.Name
+	}
+	if req.Description != "" {
+		updateData["description"] = req.Description
+	}
+	if req.Price >= 0 {
+		updateData["price"] = req.Price
+	}
+	if req.DurationMinutes >= 0 {
+		updateData["duration_minutes"] = req.DurationMinutes
+	}
+	if req.IsActive != nil {
+		updateData["is_active"] = req.IsActive
+	}
+
+	_, err = dao.OthersService.Ctx(ctx).TX(tx).Data(updateData).Where("id", req.Id).Update()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating service")
+	}
+
+	notiData := do.Notifications{
+		UserId:         userID,
+		Type:           "others_service_updated",
+		Content:        fmt.Sprintf("Service #%d (%s) for parking lot #%d has been updated.", req.Id, req.Name, req.LotId),
+		RelatedOrderId: req.Id,
+		IsRead:         false,
+		CreatedAt:      gtime.Now(),
+	}
+	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+	}
+
+	var updatedSvc struct {
+		entity.OthersService
+		LotName string `json:"lot_name"`
+	}
+	err = dao.OthersService.Ctx(ctx).
+		Fields("others_service.*, parking_lots.name as lot_name").
+		LeftJoin("parking_lots", "parking_lots.id = others_service.lot_id").
+		Where("others_service.id", req.Id).
+		Scan(&updatedSvc)
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving updated service")
+	}
+
+	item := entity.OthersServiceItem{
+		Id:              updatedSvc.Id,
+		LotId:           updatedSvc.LotId,
+		LotName:         updatedSvc.LotName,
+		Name:            updatedSvc.Name,
+		Description:     updatedSvc.Description,
+		Price:           updatedSvc.Price,
+		DurationMinutes: updatedSvc.DurationMinutes,
+		IsActive:        updatedSvc.IsActive,
+		CreatedAt:       updatedSvc.CreatedAt.Format("2006-01-02 15:04:05"),
+	}
+
+	return &item, nil
+}
+
+func (s *sOthersService) OthersServiceDelete(ctx context.Context, req *entity.OthersServiceDeleteReq) (*entity.OthersServiceDeleteRes, error) {
+	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	if userID == "" {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+	}
+
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+	}
+	if user.IsEmpty() {
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+	}
+	if gconv.String(user.Map()["role"]) != "admin" {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can delete services")
+	}
+
+	svc, err := dao.OthersService.Ctx(ctx).Where("id", req.Id).One()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking service")
+	}
+	if svc.IsEmpty() {
+		return nil, gerror.NewCode(consts.CodeNotFound, "Service not found")
+	}
+
+	count, err := dao.OthersServiceOrders.Ctx(ctx).
+		Where("service_id", req.Id).
+		Where("status", "confirmed").
+		Count()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking active orders")
+	}
+	if count > 0 {
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Cannot delete service with active orders")
+	}
+
+	tx, err := g.DB().Begin(ctx)
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		}
+	}()
+
+	_, err = dao.OthersService.Ctx(ctx).TX(tx).Where("id", req.Id).Delete()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting service")
+	}
+
+	notiData := do.Notifications{
+		UserId:         userID,
+		Type:           "others_service_deleted",
+		Content:        fmt.Sprintf("Service #%d for parking lot #%d has been deleted.", req.Id, svc.Map()["lot_id"]),
+		RelatedOrderId: req.Id,
+		IsRead:         false,
+		CreatedAt:      gtime.Now(),
+	}
+	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+	}
+
+	return &entity.OthersServiceDeleteRes{Message: "Service deleted successfully"}, nil
 }

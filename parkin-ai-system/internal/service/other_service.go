@@ -1,27 +1,36 @@
+// ================================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+// You can delete these comments if you wish manually maintain this interface file.
+// ================================================================================
+
 package service
 
 import (
 	"context"
-	"parkin-ai-system/api/other_service"
+	"parkin-ai-system/internal/model/entity"
 )
 
-type IOtherService interface {
-	OtherServiceAdd(ctx context.Context, req *other_service.OtherServiceAddReq) (res *other_service.OtherServiceAddRes, err error)
-	OtherServiceUpdate(ctx context.Context, req *other_service.OtherServiceUpdateReq) (res *other_service.OtherServiceUpdateRes, err error)
-	OtherServiceDelete(ctx context.Context, req *other_service.OtherServiceDeleteReq) (res *other_service.OtherServiceDeleteRes, err error)
-	OtherServiceDetail(ctx context.Context, req *other_service.OtherServiceDetailReq) (res *other_service.OtherServiceDetailRes, err error)
-	OtherServiceList(ctx context.Context, req *other_service.OtherServiceListReq) (res *other_service.OtherServiceListRes, err error)
-}
-
-var localOtherService IOtherService
-
-func OtherService() IOtherService {
-	if localOtherService == nil {
-		panic("implement not found for interface IOtherService, forgot register?")
+type (
+	IOthersService interface {
+		OthersServiceAdd(ctx context.Context, req *entity.OthersServiceAddReq) (*entity.OthersServiceAddRes, error)
+		OthersServiceList(ctx context.Context, req *entity.OthersServiceListReq) (*entity.OthersServiceListRes, error)
+		OthersServiceGet(ctx context.Context, req *entity.OthersServiceGetReq) (*entity.OthersServiceItem, error)
+		OthersServiceUpdate(ctx context.Context, req *entity.OthersServiceUpdateReq) (*entity.OthersServiceItem, error)
+		OthersServiceDelete(ctx context.Context, req *entity.OthersServiceDeleteReq) (*entity.OthersServiceDeleteRes, error)
 	}
-	return localOtherService
+)
+
+var (
+	localOthersService IOthersService
+)
+
+func OthersService() IOthersService {
+	if localOthersService == nil {
+		panic("implement not found for interface IOthersService, forgot register?")
+	}
+	return localOthersService
 }
 
-func RegisterOtherService(i IOtherService) {
-	localOtherService = i
+func RegisterOthersService(i IOthersService) {
+	localOthersService = i
 }
