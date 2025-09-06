@@ -38,7 +38,7 @@ func (s *sParkingLotReview) ParkingLotReviewAdd(ctx context.Context, req *entity
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
 
-	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).Where("deleted_at IS NULL").One()
+	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking lot")
 	}
@@ -87,7 +87,7 @@ func (s *sParkingLotReview) ParkingLotReviewAdd(ctx context.Context, req *entity
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating review")
 	}
 
-	adminUsers, err := dao.Users.Ctx(ctx).Where("role", "admin").All()
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).All()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
 	}

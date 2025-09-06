@@ -54,9 +54,13 @@ func entityToApiParkingLotItem(item *entity.ParkingLotItem) parking_lot.ParkingL
 	}
 	for i, img := range item.Images {
 		apiItem.Images[i] = parking_lot.ParkingLotImageItem{
-			Id:        img.Id,
-			ImageUrl:  img.ImageUrl,
-			CreatedAt: img.CreatedAt,
+			Id:           img.Id,
+			ParkingLotId: img.ParkingLotId,
+			LotName:      item.Name,
+			ImageUrl:     img.ImageUrl,
+			CreatedAt:    img.CreatedAt,
+			Description:  img.Description,
+			UpdatedAt:    img.UpdatedAt,
 		}
 	}
 	return apiItem

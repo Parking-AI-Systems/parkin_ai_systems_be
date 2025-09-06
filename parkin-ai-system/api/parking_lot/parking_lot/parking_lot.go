@@ -24,7 +24,7 @@ type ParkingLotAddReq struct {
 	OpenTime     *gtime.Time            `json:"open_time" v:"required#Open time is required"`
 	CloseTime    *gtime.Time            `json:"close_time" v:"required#Close time is required"`
 	ImageUrl     string                 `json:"image_url" v:"required#Main image URL is required"`
-	Images       []ParkingLotImageInput `json:"images" v:"length:0,10#Maximum 10 images allowed"`
+	Images       []ParkingLotImageInput `json:"images"`
 }
 
 type ParkingLotAddRes struct {

@@ -35,11 +35,16 @@ func (s *sParkingLot) ParkingLotAdd(ctx context.Context, req *entity.ParkingLotA
 	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+	// Delete related parking slots first
+	_, err = dao.ParkingSlots.Ctx(ctx).TX(tx).Where("lot_id", req.Id).Delete()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting related parking slots")
+	}
 	}
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
-	if gconv.String(user.Map()["role"]) != "admin" {
+	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can create parking lots")
 	}
 
@@ -77,6 +82,30 @@ func (s *sParkingLot) ParkingLotAdd(ctx context.Context, req *entity.ParkingLotA
 			tx.Rollback()
 		}
 	}()
+
+	// Delete related parking slots first
+	_, err = dao.ParkingSlots.Ctx(ctx).TX(tx).Where("lot_id", req.Id).Delete()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting related parking slots")
+	}
+
+	// Delete related parking slots first
+	_, err = dao.ParkingSlots.Ctx(ctx).TX(tx).Where("lot_id", req.Id).Delete()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting related parking slots")
+	}
+
+	// Delete related parking slots first
+	_, err = dao.ParkingSlots.Ctx(ctx).TX(tx).Where("lot_id", req.Id).Delete()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting related parking slots")
+	}
+
+	// Delete related parking slots first
+	_, err = dao.ParkingSlots.Ctx(ctx).TX(tx).Where("lot_id", req.Id).Delete()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting related parking slots")
+	}
 
 	data := do.ParkingLots{
 		Name:           req.Name,
@@ -146,7 +175,7 @@ func (s *sParkingLot) ParkingLotList(ctx context.Context, req *entity.ParkingLot
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
 
-	m := dao.ParkingLots.Ctx(ctx).Where("deleted_at IS NULL")
+	m := dao.ParkingLots.Ctx(ctx)
 	if req.IsActive {
 		m = m.Where("is_active", true)
 	}
@@ -180,7 +209,7 @@ func (s *sParkingLot) ParkingLotList(ctx context.Context, req *entity.ParkingLot
 	list := make([]entity.ParkingLotItem, 0, len(lots))
 	for _, lot := range lots {
 		var images []entity.ParkingLotImages
-		err = dao.ParkingLotImages.Ctx(ctx).Where("parking_lot_id", lot.Id).Scan(&images)
+		err = dao.ParkingLotImages.Ctx(ctx).Where("lot_id", lot.Id).Scan(&images)
 		if err != nil {
 			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving images for parking lot")
 		}
@@ -228,21 +257,21 @@ func (s *sParkingLot) ParkingLotList(ctx context.Context, req *entity.ParkingLot
 }
 
 func (s *sParkingLot) ParkingLotGet(ctx context.Context, req *entity.ParkingLotGetReq) (*entity.ParkingLotItem, error) {
-	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
-	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
-	}
+	// userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	// if userID == "" {
+	// 	return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+	// }
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
-	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
-	}
-	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
-	}
+	// user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	// if err != nil {
+	// 	return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+	// }
+	// if user.IsEmpty() {
+	// 	return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+	// }
 
 	var lot entity.ParkingLots
-	err = dao.ParkingLots.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").Scan(&lot)
+	err := dao.ParkingLots.Ctx(ctx).Where("id", req.Id).Scan(&lot)
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving parking lot")
 	}
@@ -251,7 +280,7 @@ func (s *sParkingLot) ParkingLotGet(ctx context.Context, req *entity.ParkingLotG
 	}
 
 	var images []entity.ParkingLotImages
-	err = dao.ParkingLotImages.Ctx(ctx).Where("parking_lot_id", lot.Id).Scan(&images)
+	err = dao.ParkingLotImages.Ctx(ctx).Where("lot_id", lot.Id).Scan(&images)
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving images for parking lot")
 	}
@@ -310,7 +339,7 @@ func (s *sParkingLot) ParkingLotUpdate(ctx context.Context, req *entity.ParkingL
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can update parking lots")
 	}
 
-	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
+	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.Id).One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking lot")
 	}
@@ -408,7 +437,7 @@ func (s *sParkingLot) ParkingLotUpdate(ctx context.Context, req *entity.ParkingL
 	}
 
 	var images []entity.ParkingLotImages
-	err = dao.ParkingLotImages.Ctx(ctx).Where("parking_lot_id", updatedLot.Id).Scan(&images)
+	err = dao.ParkingLotImages.Ctx(ctx).Where("lot_id", updatedLot.Id).Scan(&images)
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving images for parking lot")
 	}
@@ -462,11 +491,11 @@ func (s *sParkingLot) ParkingLotDelete(ctx context.Context, req *entity.ParkingL
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
-	if gconv.String(user.Map()["role"]) != "admin" {
+	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can delete parking lots")
 	}
 
-	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
+	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.Id).One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking lot")
 	}
