@@ -119,20 +119,21 @@ func (s *sFavorite) FavoriteList(ctx context.Context, req *entity.FavoriteListRe
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
 
-	m := dao.Favorites.Ctx(ctx).
-		Fields("favorites.*, parking_lots.name as lot_name, parking_lots.address as lot_address").
+	// Build base query conditions
+	baseQuery := dao.Favorites.Ctx(ctx).
 		LeftJoin("parking_lots", "parking_lots.id = favorites.lot_id")
 
-	isAdmin := gconv.String(user.Map()["role"]) == "admin"
+	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 	if !isAdmin {
-		m = m.Where("favorites.user_id", userID)
+		baseQuery = baseQuery.Where("favorites.user_id", userID)
 	}
 
 	if req.LotName != "" {
-		m = m.WhereLike("parking_lots.name", "%"+req.LotName+"%")
+		baseQuery = baseQuery.WhereLike("parking_lots.name", "%"+req.LotName+"%")
 	}
 
-	total, err := m.Count()
+	// Count query - use simple field
+	total, err := baseQuery.Fields("favorites.id").Count()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error counting favorite lots")
 	}
@@ -143,14 +144,16 @@ func (s *sFavorite) FavoriteList(ctx context.Context, req *entity.FavoriteListRe
 	if req.PageSize <= 0 {
 		req.PageSize = 10
 	}
-	m = m.Limit(req.PageSize).Offset((req.Page - 1) * req.PageSize)
 
+	// Data query - use joined fields
 	var favorites []struct {
 		entity.Favorites
 		LotName    string `json:"lot_name"`
 		LotAddress string `json:"lot_address"`
 	}
-	err = m.Order("favorites.id DESC").Scan(&favorites)
+	err = baseQuery.Fields("favorites.*, parking_lots.name as lot_name, parking_lots.address as lot_address").
+		Limit(req.PageSize).Offset((req.Page - 1) * req.PageSize).
+		Order("favorites.id DESC").Scan(&favorites)
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving favorite lots")
 	}
@@ -196,7 +199,7 @@ func (s *sFavorite) FavoriteDelete(ctx context.Context, req *entity.FavoriteDele
 		return nil, gerror.NewCode(consts.CodeNotFound, "Favorite lot not found")
 	}
 
-	isAdmin := gconv.String(user.Map()["role"]) == "admin"
+	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 	if !isAdmin && gconv.Int64(favorite.Map()["user_id"]) != gconv.Int64(userID) {
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only delete your own favorite lots or must be an admin")
 	}

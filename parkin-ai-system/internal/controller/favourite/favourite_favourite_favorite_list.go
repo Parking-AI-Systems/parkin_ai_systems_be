@@ -32,6 +32,7 @@ func (c *ControllerFavourite) FavoriteList(ctx context.Context, req *favourite.F
 	for _, item := range listRes.List {
 		res.List = append(res.List, favourite.FavoriteItem{
 			Id:         item.Id,
+			UserId:     item.UserId,
 			LotId:      item.LotId,
 			LotName:    item.LotName,
 			LotAddress: item.LotAddress,
