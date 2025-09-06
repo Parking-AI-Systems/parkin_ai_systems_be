@@ -3,3 +3,13 @@
 // =================================================================================
 
 package notification
+
+import (
+	"parkin-ai-system/api/notification"
+)
+
+type ControllerNotification struct{}
+
+func NewNotification() notification.INotificationNotification {
+	return &ControllerNotification{}
+}

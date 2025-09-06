@@ -7,15 +7,15 @@ package service
 
 import (
 	"context"
-	"parkin-ai-system/api/notification"
+	"parkin-ai-system/internal/model/entity"
 )
 
 type (
 	INotification interface {
-		NotificationAdd(ctx context.Context, req *notification.NotificationAddReq) (*notification.NotificationAddRes, error)
-		NotificationList(ctx context.Context, req *notification.NotificationListReq) (*notification.NotificationListRes, error)
-		NotificationUpdate(ctx context.Context, req *notification.NotificationUpdateReq) (*notification.NotificationUpdateRes, error)
-		NotificationDelete(ctx context.Context, req *notification.NotificationDeleteReq) (*notification.NotificationDeleteRes, error)
+		NotificationList(ctx context.Context, req *entity.NotificationListReq) (*entity.NotificationListRes, error)
+		NotificationGet(ctx context.Context, req *entity.NotificationGetReq) (*entity.NotificationItem, error)
+		NotificationMarkRead(ctx context.Context, req *entity.NotificationMarkReadReq) (*entity.NotificationMarkReadRes, error)
+		NotificationDelete(ctx context.Context, req *entity.NotificationDeleteReq) (*entity.NotificationDeleteRes, error)
 	}
 )
 
