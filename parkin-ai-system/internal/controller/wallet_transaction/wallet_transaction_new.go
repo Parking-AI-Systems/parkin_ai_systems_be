@@ -3,3 +3,13 @@
 // =================================================================================
 
 package wallet_transaction
+
+import (
+	"parkin-ai-system/api/wallet_transaction"
+)
+
+type ControllerWallet_transaction struct{}
+
+func NewWallet_transaction() wallet_transaction.IWalletTransactionWallet_transaction {
+	return &ControllerWallet_transaction{}
+}

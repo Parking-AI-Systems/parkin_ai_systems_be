@@ -32,3 +32,17 @@ var VehicleSlotCompatibility = map[string][]string{
 	VehicleTypeMotorbike: {SlotTypeStandard},
 	VehicleTypeTruck:     {SlotTypeStandard, SlotTypeVIP},
 }
+
+const (
+	TransactionTypeDeposit    = "deposit"
+	TransactionTypeWithdrawal = "withdrawal"
+	TransactionTypePayment    = "payment"
+	TransactionTypeRefund     = "refund"
+)
+
+var ValidTransactionTypes = []string{
+	TransactionTypeDeposit,
+	TransactionTypeWithdrawal,
+	TransactionTypePayment,
+	TransactionTypeRefund,
+}

@@ -7,13 +7,14 @@ package service
 
 import (
 	"context"
-	"parkin-ai-system/api/wallet_transaction"
+	"parkin-ai-system/internal/model/entity"
 )
 
 type (
 	IWalletTransaction interface {
-		WalletTransactionAdd(ctx context.Context, req *wallet_transaction.WalletTransactionAddReq) (*wallet_transaction.WalletTransactionAddRes, error)
-		WalletTransactionList(ctx context.Context, req *wallet_transaction.WalletTransactionListReq) (*wallet_transaction.WalletTransactionListRes, error)
+		WalletTransactionAdd(ctx context.Context, req *entity.WalletTransactionAddReq) (*entity.WalletTransactionAddRes, error)
+		WalletTransactionList(ctx context.Context, req *entity.WalletTransactionListReq) (*entity.WalletTransactionListRes, error)
+		WalletTransactionGet(ctx context.Context, req *entity.WalletTransactionGetReq) (*entity.WalletTransactionItem, error)
 	}
 )
 

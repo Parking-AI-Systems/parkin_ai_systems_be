@@ -1,34 +1,17 @@
+// =================================================================================
+// Code generated and maintained by GoFrame CLI tool. DO NOT EDIT.
+// =================================================================================
+
 package wallet_transaction
 
 import (
-	"github.com/gogf/gf/v2/frame/g"
+	"context"
+
+	"parkin-ai-system/api/wallet_transaction/wallet_transaction"
 )
 
-type WalletTransactionAddReq struct {
-	g.Meta      `path:"/wallet-transactions" method:"post" tags:"WalletTransaction" summary:"Tạo giao dịch ví" security:"BearerAuth"`
-	Amount      float64 `json:"amount" v:"required"`
-	Type        string  `json:"type" v:"required"`
-	Description string  `json:"description"`
-	RelatedOrderId int64 `json:"related_order_id"`
-}
-
-type WalletTransactionAddRes struct {
-	Id int64 `json:"id"`
-}
-
-type WalletTransactionListReq struct {
-	g.Meta `path:"/wallet-transactions" method:"get" tags:"WalletTransaction" summary:"Danh sách giao dịch ví" security:"BearerAuth"`
-}
-
-type WalletTransactionListRes struct {
-	List []WalletTransactionItem `json:"list"`
-}
-
-type WalletTransactionItem struct {
-	Id            int64   `json:"id"`
-	Amount        float64 `json:"amount"`
-	Type          string  `json:"type"`
-	Description   string  `json:"description"`
-	RelatedOrderId int64  `json:"related_order_id"`
-	CreatedAt     string  `json:"created_at"`
+type IWalletTransactionWallet_transaction interface {
+	WalletTransactionAdd(ctx context.Context, req *wallet_transaction.WalletTransactionAddReq) (res *wallet_transaction.WalletTransactionAddRes, err error)
+	WalletTransactionList(ctx context.Context, req *wallet_transaction.WalletTransactionListReq) (res *wallet_transaction.WalletTransactionListRes, err error)
+	WalletTransactionGet(ctx context.Context, req *wallet_transaction.WalletTransactionGetReq) (res *wallet_transaction.WalletTransactionGetRes, err error)
 }
