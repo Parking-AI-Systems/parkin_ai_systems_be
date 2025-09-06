@@ -5,8 +5,8 @@ const (
 	TokenTypeRefresh = "token_refresh"
 )
 const (
-	RoleAdmin = "admin"
-	RoleUser  = "user"
+	RoleAdmin = "role_admin"
+	RoleUser  = "role_user"
 )
 
 var ValidRoles = []string{
