@@ -8,9 +8,11 @@ const (
 	TokenTypeRefresh = "token_refresh"
 )
 
-var ValidSlotTypes = []string{
-	"compact",
-	"large",
-	"handicapped",
-	"electric",
-}
+const (
+	SlotTypeStandard = "standard"
+	SlotTypeDisabled = "disabled"
+	SlotTypeElectric = "electric"
+	SlotTypeVIP      = "VIP"
+)
+
+var ValidSlotTypes = []string{SlotTypeStandard, SlotTypeDisabled, SlotTypeElectric, SlotTypeVIP}

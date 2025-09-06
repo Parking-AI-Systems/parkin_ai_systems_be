@@ -41,7 +41,7 @@ func (s *sParkingSlot) ParkingSlotAdd(ctx context.Context, req *entity.ParkingSl
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can add parking slots")
 	}
 
-	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).Where("deleted_at IS NULL").One()
+	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking lot")
 	}
@@ -269,7 +269,7 @@ func (s *sParkingSlot) ParkingSlotUpdate(ctx context.Context, req *entity.Parkin
 	}
 
 	if req.LotId != 0 {
-		lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).Where("deleted_at IS NULL").One()
+		lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).One()
 		if err != nil {
 			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking lot")
 		}
