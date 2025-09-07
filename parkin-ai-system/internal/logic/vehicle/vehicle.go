@@ -31,27 +31,27 @@ var licensePlateRegex = regexp.MustCompile(`^[0-9]{2}[A-Z]-[0-9]{4,5}$`)
 func (s *sVehicle) VehicleAdd(ctx context.Context, req *entity.VehicleAddReq) (*entity.VehicleAddRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to add a vehicle.")
 	}
 
 	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
 	if !licensePlateRegex.MatchString(req.LicensePlate) {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Invalid license plate format. Must be like XXA-12345")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Invalid license plate format. Use a format like XXA-12345.")
 	}
 
-	count, err := dao.Vehicles.Ctx(ctx).Where("license_plate", req.LicensePlate).Count()
+	count, err := dao.Vehicles.Ctx(ctx).Where("license_plate", req.LicensePlate).Where("deleted_at IS NULL").Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking license plate uniqueness")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to check if the license plate is available. Please try again.")
 	}
 	if count > 0 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "License plate already exists")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "This license plate is already registered.")
 	}
 
 	isValidVehicleType := false
@@ -62,25 +62,25 @@ func (s *sVehicle) VehicleAdd(ctx context.Context, req *entity.VehicleAddReq) (*
 		}
 	}
 	if !isValidVehicleType {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Invalid vehicle type")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Invalid vehicle type. Please choose a valid type (e.g., car, motorcycle).")
 	}
 
 	if len(req.LicensePlate) > 20 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "License plate must be less than 20 characters")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "License plate must be 20 characters or fewer.")
 	}
 	if req.Brand != "" && len(req.Brand) > 50 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Brand must be less than 50 characters")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Brand name must be 50 characters or fewer.")
 	}
 	if req.Model != "" && len(req.Model) > 50 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Model must be less than 50 characters")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Model name must be 50 characters or fewer.")
 	}
 	if req.Color != "" && len(req.Color) > 50 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Color must be less than 50 characters")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Color name must be 50 characters or fewer.")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the vehicle. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -99,12 +99,12 @@ func (s *sVehicle) VehicleAdd(ctx context.Context, req *entity.VehicleAddReq) (*
 	}
 	lastId, err := dao.Vehicles.Ctx(ctx).TX(tx).Data(data).InsertAndGetId()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating vehicle")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the vehicle. Please try again later.")
 	}
 
-	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).All()
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).Where("deleted_at IS NULL").All()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the vehicle. Please try again later.")
 	}
 
 	for _, admin := range adminUsers {
@@ -118,13 +118,13 @@ func (s *sVehicle) VehicleAdd(ctx context.Context, req *entity.VehicleAddReq) (*
 		}
 		_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the vehicle. Please try again later.")
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the vehicle. Please try again later.")
 	}
 
 	return &entity.VehicleAddRes{Id: lastId}, nil
@@ -133,20 +133,21 @@ func (s *sVehicle) VehicleAdd(ctx context.Context, req *entity.VehicleAddReq) (*
 func (s *sVehicle) VehicleList(ctx context.Context, req *entity.VehicleListReq) (*entity.VehicleListRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view vehicles.")
 	}
 
 	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
 	m := dao.Vehicles.Ctx(ctx).
 		LeftJoin("users", "users.id = vehicles.user_id").
-		Where("vehicles.deleted_at IS NULL")
+		Where("vehicles.deleted_at IS NULL").
+		Where("users.deleted_at IS NULL")
 
 	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 	if !isAdmin {
@@ -159,7 +160,7 @@ func (s *sVehicle) VehicleList(ctx context.Context, req *entity.VehicleListReq) 
 
 	total, err := m.Fields("vehicles.id").Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error counting vehicles")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load vehicles. Please try again later.")
 	}
 
 	if req.Page <= 0 {
@@ -170,15 +171,13 @@ func (s *sVehicle) VehicleList(ctx context.Context, req *entity.VehicleListReq) 
 	}
 	m = m.Limit(req.PageSize).Offset((req.Page - 1) * req.PageSize)
 
-	// Add debug logging to see what's in the records
 	records, err := m.Fields(
 		"vehicles.id, vehicles.user_id, vehicles.license_plate, vehicles.brand, vehicles.model, vehicles.color, vehicles.type, vehicles.created_at, users.username",
 	).Order("vehicles.id DESC").All()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving vehicles")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load vehicles. Please try again later.")
 	}
 
-	// Add debug logging
 	g.Log().Debug(ctx, "VehicleList - Records count:", len(records))
 	if len(records) > 0 {
 		g.Log().Debug(ctx, "VehicleList - First record:", records[0])
@@ -202,11 +201,10 @@ func (s *sVehicle) VehicleList(ctx context.Context, req *entity.VehicleListReq) 
 
 		g.Log().Debug(ctx, "Processed - userId:", userId, "username:", username)
 
-		// Make sure the struct field names match exactly
 		item := entity.VehicleItem{
 			Id:           record["id"].Int64(),
-			UserId:       userId,   // This should be mapped correctly
-			Username:     username, // This should be mapped correctly
+			UserId:       userId,
+			Username:     username,
 			LicensePlate: record["license_plate"].String(),
 			Brand:        record["brand"].String(),
 			Model:        record["model"].String(),
@@ -215,13 +213,10 @@ func (s *sVehicle) VehicleList(ctx context.Context, req *entity.VehicleListReq) 
 			CreatedAt:    record["created_at"].Time().Format("2006-01-02 15:04:05"),
 		}
 
-		// Add this debug log to see what's in the item
 		g.Log().Debug(ctx, "Created item:", item)
-
 		list = append(list, item)
 	}
 
-	// Add this debug log to see the final list
 	g.Log().Debug(ctx, "Final list before return:", list)
 	return &entity.VehicleListRes{
 		List:  list,
@@ -232,15 +227,15 @@ func (s *sVehicle) VehicleList(ctx context.Context, req *entity.VehicleListReq) 
 func (s *sVehicle) VehicleGet(ctx context.Context, req *entity.VehicleGetReq) (*entity.VehicleItem, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view vehicle details.")
 	}
 
 	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
 	var vehicle struct {
@@ -252,17 +247,18 @@ func (s *sVehicle) VehicleGet(ctx context.Context, req *entity.VehicleGetReq) (*
 		LeftJoin("users", "users.id = vehicles.user_id").
 		Where("vehicles.id", req.Id).
 		Where("vehicles.deleted_at IS NULL").
+		Where("users.deleted_at IS NULL").
 		Scan(&vehicle)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving vehicle")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load vehicle details. Please try again later.")
 	}
 	if vehicle.Id == 0 {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Vehicle not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The vehicle could not be found.")
 	}
 
 	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 	if !isAdmin && vehicle.UserId != gconv.Int64(userID) {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only view your own vehicles or must be an admin")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only view your own vehicles or need admin access.")
 	}
 
 	item := entity.VehicleItem{
@@ -283,43 +279,44 @@ func (s *sVehicle) VehicleGet(ctx context.Context, req *entity.VehicleGetReq) (*
 func (s *sVehicle) VehicleUpdate(ctx context.Context, req *entity.VehicleUpdateReq) (*entity.VehicleItem, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to update vehicle details.")
 	}
 
 	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
-	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", req.Id).Where("deleted_at is NULL").One()
+	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking vehicle")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the vehicle. Please try again.")
 	}
 	if vehicle.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Vehicle not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The vehicle could not be found.")
 	}
 
 	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 	if !isAdmin && gconv.Int64(vehicle.Map()["user_id"]) != gconv.Int64(userID) {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only update your own vehicles or must be an admin")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only update your own vehicles or need admin access.")
 	}
 
 	if req.LicensePlate != "" {
 		if !licensePlateRegex.MatchString(req.LicensePlate) {
-			return nil, gerror.NewCode(consts.CodeInvalidInput, "Invalid license plate format. Must be like XXA-12345")
+			return nil, gerror.NewCode(consts.CodeInvalidInput, "Invalid license plate format. Use a format like XXA-12345.")
 		}
 		count, err := dao.Vehicles.Ctx(ctx).
 			Where("license_plate", req.LicensePlate).
 			Where("id != ?", req.Id).
+			Where("deleted_at IS NULL").
 			Count()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking license plate uniqueness")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to check if the license plate is available. Please try again.")
 		}
 		if count > 0 {
-			return nil, gerror.NewCode(consts.CodeInvalidInput, "License plate already exists")
+			return nil, gerror.NewCode(consts.CodeInvalidInput, "This license plate is already registered.")
 		}
 	}
 
@@ -332,26 +329,26 @@ func (s *sVehicle) VehicleUpdate(ctx context.Context, req *entity.VehicleUpdateR
 			}
 		}
 		if !isValidVehicleType {
-			return nil, gerror.NewCode(consts.CodeInvalidInput, "Invalid vehicle type")
+			return nil, gerror.NewCode(consts.CodeInvalidInput, "Invalid vehicle type. Please choose a valid type (e.g., car, motorcycle).")
 		}
 	}
 
 	if req.LicensePlate != "" && len(req.LicensePlate) > 20 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "License plate must be less than 20 characters")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "License plate must be 20 characters or fewer.")
 	}
 	if req.Brand != "" && len(req.Brand) > 50 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Brand must be less than 50 characters")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Brand name must be 50 characters or fewer.")
 	}
 	if req.Model != "" && len(req.Model) > 50 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Model must be less than 50 characters")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Model name must be 50 characters or fewer.")
 	}
 	if req.Color != "" && len(req.Color) > 50 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Color must be less than 50 characters")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Color name must be 50 characters or fewer.")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the vehicle. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -378,12 +375,12 @@ func (s *sVehicle) VehicleUpdate(ctx context.Context, req *entity.VehicleUpdateR
 	updateData["updated_at"] = gtime.Now()
 	_, err = dao.Vehicles.Ctx(ctx).TX(tx).Data(updateData).Where("id", req.Id).Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating vehicle")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the vehicle. Please try again later.")
 	}
 
-	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).All()
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).Where("deleted_at IS NULL").All()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the vehicle. Please try again later.")
 	}
 
 	for _, admin := range adminUsers {
@@ -397,13 +394,13 @@ func (s *sVehicle) VehicleUpdate(ctx context.Context, req *entity.VehicleUpdateR
 		}
 		_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the vehicle. Please try again later.")
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the vehicle. Please try again later.")
 	}
 
 	var updatedVehicle struct {
@@ -414,9 +411,11 @@ func (s *sVehicle) VehicleUpdate(ctx context.Context, req *entity.VehicleUpdateR
 		Fields("vehicles.*, users.username as username").
 		LeftJoin("users", "users.id = vehicles.user_id").
 		Where("vehicles.id", req.Id).
+		Where("vehicles.deleted_at IS NULL").
+		Where("users.deleted_at IS NULL").
 		Scan(&updatedVehicle)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving updated vehicle")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load updated vehicle details. Please try again later.")
 	}
 
 	item := entity.VehicleItem{
@@ -439,44 +438,45 @@ func (s *sVehicle) VehicleUpdate(ctx context.Context, req *entity.VehicleUpdateR
 func (s *sVehicle) VehicleDelete(ctx context.Context, req *entity.VehicleDeleteReq) (*entity.VehicleDeleteRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to delete a vehicle.")
 	}
 
 	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
-	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", req.Id).Where("deleted_at is NULL").One()
+	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking vehicle")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the vehicle. Please try again.")
 	}
 	if vehicle.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Vehicle not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The vehicle could not be found.")
 	}
 
 	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 	if !isAdmin && gconv.Int64(vehicle.Map()["user_id"]) != gconv.Int64(userID) {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only delete your own vehicles or must be an admin")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only delete your own vehicles or need admin access.")
 	}
 
 	count, err := dao.ParkingOrders.Ctx(ctx).
 		Where("vehicle_id", req.Id).
 		Where("status NOT IN (?)", g.Slice{"completed", "cancelled"}).
+		Where("deleted_at IS NULL").
 		Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking active orders")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to check vehicle orders. Please try again later.")
 	}
 	if count > 0 {
-		return nil, gerror.NewCode(consts.CodeInvalidOperation, "Cannot delete vehicle with active orders")
+		return nil, gerror.NewCode(consts.CodeInvalidOperation, "Cannot delete this vehicle because it has active parking orders.")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the vehicle. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -488,11 +488,11 @@ func (s *sVehicle) VehicleDelete(ctx context.Context, req *entity.VehicleDeleteR
 		"deleted_at": gtime.Now(),
 	}).Where("id", req.Id).Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting vehicle")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the vehicle. Please try again later.")
 	}
-	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).All()
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).Where("deleted_at IS NULL").All()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the vehicle. Please try again later.")
 	}
 
 	for _, admin := range adminUsers {
@@ -506,34 +506,33 @@ func (s *sVehicle) VehicleDelete(ctx context.Context, req *entity.VehicleDeleteR
 		}
 		_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the vehicle. Please try again later.")
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the vehicle. Please try again later.")
 	}
 
 	return &entity.VehicleDeleteRes{Message: "Vehicle deleted successfully"}, nil
 }
 
-// CheckVehicleSlotCompatibility checks if a vehicle type is compatible with a parking slot type
 func (s *sVehicle) CheckVehicleSlotCompatibility(ctx context.Context, vehicleID, slotID int64) error {
 	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", vehicleID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return gerror.NewCode(consts.CodeDatabaseError, "Error checking vehicle")
+		return gerror.NewCode(consts.CodeDatabaseError, "Unable to verify the vehicle. Please try again.")
 	}
 	if vehicle.IsEmpty() {
-		return gerror.NewCode(consts.CodeNotFound, "Vehicle not found")
+		return gerror.NewCode(consts.CodeNotFound, "The vehicle could not be found.")
 	}
 
-	slot, err := dao.ParkingSlots.Ctx(ctx).Where("id", slotID).One()
+	slot, err := dao.ParkingSlots.Ctx(ctx).Where("id", slotID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return gerror.NewCode(consts.CodeDatabaseError, "Error checking parking slot")
+		return gerror.NewCode(consts.CodeDatabaseError, "Unable to verify the parking slot. Please try again.")
 	}
 	if slot.IsEmpty() {
-		return gerror.NewCode(consts.CodeNotFound, "Parking slot not found")
+		return gerror.NewCode(consts.CodeNotFound, "The parking slot could not be found.")
 	}
 
 	vehicleType := gconv.String(vehicle.Map()["type"])
@@ -541,7 +540,7 @@ func (s *sVehicle) CheckVehicleSlotCompatibility(ctx context.Context, vehicleID,
 
 	compatibleSlots, exists := consts.VehicleSlotCompatibility[vehicleType]
 	if !exists {
-		return gerror.NewCode(consts.CodeInvalidInput, "Invalid vehicle type")
+		return gerror.NewCode(consts.CodeInvalidInput, "Invalid vehicle type. Please choose a valid type (e.g., car, motorcycle).")
 	}
 
 	for _, compatibleSlotType := range compatibleSlots {
@@ -550,5 +549,5 @@ func (s *sVehicle) CheckVehicleSlotCompatibility(ctx context.Context, vehicleID,
 		}
 	}
 
-	return gerror.NewCode(consts.CodeInvalidInput, fmt.Sprintf("Vehicle type %s is not compatible with slot type %s", vehicleType, slotType))
+	return gerror.NewCode(consts.CodeInvalidInput, fmt.Sprintf("This vehicle type (%s) cannot be parked in this slot type (%s).", vehicleType, slotType))
 }

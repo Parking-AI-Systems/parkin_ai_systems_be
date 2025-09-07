@@ -27,6 +27,7 @@ type ParkingLots struct {
 	ImageUrl       string      `json:"imageUrl"       orm:"image_url"       description:""`
 	CreatedAt      *gtime.Time `json:"createdAt"      orm:"created_at"      description:""`
 	UpdatedAt      *gtime.Time `json:"updatedAt"      orm:"updated_at"      description:""`
+	DeletedAt      *gtime.Time `json:"deletedAt"      orm:"deleted_at"      description:""`
 }
 
 type ParkingLotImageInput struct {
@@ -90,6 +91,7 @@ type ParkingLotItem struct {
 	Images        []ParkingLotImageItem `json:"images"`
 	CreatedAt     string               `json:"created_at"`
 	UpdatedAt     string               `json:"updated_at"`
+	DeletedAt     string               `json:"deleted_at,omitempty"`
 }
 
 type ParkingLotListRes struct {
