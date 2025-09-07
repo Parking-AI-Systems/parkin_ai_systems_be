@@ -12,12 +12,11 @@ import (
 	"parkin-ai-system/utility"
 	"time"
 
+	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/gogf/gf/v2/util/guid"
-
-	"github.com/gogf/gf/v2/errors/gerror"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -33,30 +32,30 @@ func init() {
 
 func (s *sUser) SignUp(ctx context.Context, req *entity.UserRegisterReq) (res *entity.UserRegisterRes, err error) {
 	if req.Email == "" || req.Password == "" || req.Username == "" || req.Phone == "" {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Email, username, password, and phone are required")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Please provide your email, username, password, and phone number.")
 	}
 
-	// Validate unique fields
 	count, err := dao.Users.Ctx(ctx).
 		WhereOr("email", req.Email).
 		WhereOr("username", req.Username).
 		WhereOr("phone", req.Phone).
+		Where("deleted_at IS NULL").
 		Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your information. Please try again later.")
 	}
 	if count > 0 {
-		return nil, gerror.NewCode(consts.CodeEmailExists, "Username, email, or phone already exists")
+		return nil, gerror.NewCode(consts.CodeEmailExists, "This username, email, or phone number is already in use.")
 	}
 
 	hashedPwd, err := s.HashPassword(req.Password)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeHashPasswordFailed, "Error hashing password")
+		return nil, gerror.NewCode(consts.CodeHashPasswordFailed, "Unable to process your password. Please try again.")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while creating your account. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -79,13 +78,12 @@ func (s *sUser) SignUp(ctx context.Context, req *entity.UserRegisterReq) (res *e
 		"updated_at":     gtime.Now(),
 	}).InsertAndGetId()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeFailedToCreate, "Error creating user")
+		return nil, gerror.NewCode(consts.CodeFailedToCreate, "Something went wrong while creating your account. Please try again later.")
 	}
 
-	// Notify admins
-	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).All()
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).Where("deleted_at IS NULL").All()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while creating your account. Please try again later.")
 	}
 	for _, admin := range adminUsers {
 		notiData := do.Notifications{
@@ -98,13 +96,13 @@ func (s *sUser) SignUp(ctx context.Context, req *entity.UserRegisterReq) (res *e
 		}
 		_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while creating your account. Please try again later.")
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while creating your account. Please try again later.")
 	}
 
 	res = &entity.UserRegisterRes{
@@ -121,20 +119,20 @@ func (s *sUser) SignUp(ctx context.Context, req *entity.UserRegisterReq) (res *e
 
 func (s *sUser) Login(ctx context.Context, req *entity.UserLoginReq) (res *entity.UserLoginRes, err error) {
 	if req.Account == "" || req.Password == "" {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Account and password are required")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Please provide your email and password.")
 	}
 
-	userRecord, err := dao.Users.Ctx(ctx).Where("email", req.Account).One()
+	userRecord, err := dao.Users.Ctx(ctx).Where("email", req.Account).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if userRecord.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "We couldn’t find an account with that email.")
 	}
 
 	password := userRecord["password_hash"].String()
 	if err := bcrypt.CompareHashAndPassword([]byte(password), []byte(req.Password)); err != nil {
-		return nil, gerror.NewCode(consts.CodeIncorrectPassword, "Incorrect password")
+		return nil, gerror.NewCode(consts.CodeIncorrectPassword, "The password you entered is incorrect.")
 	}
 
 	userId := userRecord["id"].Int64()
@@ -148,18 +146,18 @@ func (s *sUser) Login(ctx context.Context, req *entity.UserLoginReq) (res *entit
 		"created_at":  gtime.Now(),
 	}).Insert()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeFailedToCreate, "Error creating refresh token")
+		return nil, gerror.NewCode(consts.CodeFailedToCreate, "Something went wrong during login. Please try again later.")
 	}
 
 	accessToken := &service.AccessToken{
 		Iss: "parkin-ai-system",
 		Sub: fmt.Sprintf("%d", userId),
-		Exp: gtime.Now().Add(time.Hour * 24).Unix(), // 24 hours expiry
+		Exp: gtime.Now().Add(time.Hour * 24).Unix(),
 	}
 
 	accessTokenStr, err := accessToken.Gen()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeFailedToCreate, "Error generating access token")
+		return nil, gerror.NewCode(consts.CodeFailedToCreate, "Something went wrong during login. Please try again later.")
 	}
 
 	res = &entity.UserLoginRes{
@@ -175,35 +173,35 @@ func (s *sUser) Login(ctx context.Context, req *entity.UserLoginReq) (res *entit
 
 func (s *sUser) RefreshToken(ctx context.Context, req *entity.UserRefreshTokenReq) (res *entity.UserRefreshTokenRes, err error) {
 	if req.RefreshToken == "" {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Refresh token is required")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Please provide a refresh token.")
 	}
 
 	tokenRecord, err := dao.ApiTokens.Ctx(ctx).Where("token", req.RefreshToken).Where("is_active", true).One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking token")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify the token. Please try again.")
 	}
 	if tokenRecord.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeInvalidToken, "Invalid or inactive refresh token")
+		return nil, gerror.NewCode(consts.CodeInvalidToken, "The refresh token is invalid or no longer active.")
 	}
 
 	userId := tokenRecord["user_id"].Int64()
-	userRecord, err := dao.Users.Ctx(ctx).Where("id", userId).One()
+	userRecord, err := dao.Users.Ctx(ctx).Where("id", userId).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if userRecord.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
 	accessToken := &service.AccessToken{
 		Iss: "parkin-ai-system",
 		Sub: fmt.Sprintf("%d", userId),
-		Exp: 0, // Set appropriate expiry in production
+		Exp: gtime.Now().Add(time.Hour * 24).Unix(),
 	}
 
 	accessTokenStr, err := accessToken.Gen()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeFailedToCreate, "Error generating access token")
+		return nil, gerror.NewCode(consts.CodeFailedToCreate, "Something went wrong while refreshing your session. Please try again later.")
 	}
 
 	newRefreshTokenStr := guid.S()
@@ -212,7 +210,7 @@ func (s *sUser) RefreshToken(ctx context.Context, req *entity.UserRefreshTokenRe
 		"is_active": false,
 	}).Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeFailedToUpdate, "Error deactivating old token")
+		return nil, gerror.NewCode(consts.CodeFailedToUpdate, "Something went wrong while refreshing your session. Please try again later.")
 	}
 
 	_, err = dao.ApiTokens.Ctx(ctx).Data(g.Map{
@@ -223,7 +221,7 @@ func (s *sUser) RefreshToken(ctx context.Context, req *entity.UserRefreshTokenRe
 		"created_at":  gtime.Now(),
 	}).Insert()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeFailedToCreate, "Error creating new refresh token")
+		return nil, gerror.NewCode(consts.CodeFailedToCreate, "Something went wrong while refreshing your session. Please try again later.")
 	}
 
 	res = &entity.UserRefreshTokenRes{
@@ -269,15 +267,15 @@ func (s *sUser) Logout(ctx context.Context, req *entity.UserLogoutReq) (res *ent
 func (s *sUser) UserProfile(ctx context.Context, req *entity.UserProfileReq) (res *entity.UserProfileRes, err error) {
 	userIDStr := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userIDStr == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view your profile.")
 	}
 
-	userRecord, err := dao.Users.Ctx(ctx).Where("id", userIDStr).Where("deleted_at is null").One()
+	userRecord, err := dao.Users.Ctx(ctx).Where("id", userIDStr).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load your profile. Please try again later.")
 	}
 	if userRecord.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
 	res = &entity.UserProfileRes{
@@ -300,28 +298,28 @@ func (s *sUser) UserProfile(ctx context.Context, req *entity.UserProfileReq) (re
 func (s *sUser) UserById(ctx context.Context, req *entity.UserByIdReq) (res *entity.UserByIdRes, err error) {
 	userIDStr := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userIDStr == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view the profile.")
 	}
 
-	currentUser, err := dao.Users.Ctx(ctx).Where("id", userIDStr).One()
+	currentUser, err := dao.Users.Ctx(ctx).Where("id", userIDStr).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking current user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load the profile. Please try again later.")
 	}
 	if currentUser.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "Current user not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "The account could not be found. Please contact support.")
 	}
 
 	isAdmin := currentUser["role"].String() == consts.RoleAdmin
 	if !isAdmin && gconv.Int64(userIDStr) != req.Id {
-		return nil, gerror.NewCode(consts.CodeNotOwner, "You can only view your own profile or must be an admin")
+		return nil, gerror.NewCode(consts.CodeNotOwner, "Only admins or the account owner can view this profile.")
 	}
 
-	userRecord, err := dao.Users.Ctx(ctx).Where("id", req.Id).One()
+	userRecord, err := dao.Users.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load the profile. Please try again later.")
 	}
 	if userRecord.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "The account could not be found. Please contact support.")
 	}
 
 	res = &entity.UserByIdRes{
@@ -344,16 +342,15 @@ func (s *sUser) UserById(ctx context.Context, req *entity.UserByIdReq) (res *ent
 func (s *sUser) UserUpdateProfile(ctx context.Context, req *entity.UserUpdateProfileReq) (res *entity.UserUpdateProfileRes, err error) {
 	userIDStr := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userIDStr == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to update your profile.")
 	}
 
 	if !middleware.CheckResourceOwnership(g.RequestFromCtx(ctx), userIDStr) {
-		return nil, gerror.NewCode(consts.CodeNotOwner, "You can only update your own profile")
+		return nil, gerror.NewCode(consts.CodeNotOwner, "You can only update your own profile.")
 	}
 
-	// Validate unique fields
 	if req.Email != "" || req.Phone != "" || req.Username != "" {
-		m := dao.Users.Ctx(ctx).Where("id <> ?", userIDStr)
+		m := dao.Users.Ctx(ctx).Where("id <> ?", userIDStr).Where("deleted_at IS NULL")
 		if req.Username != "" {
 			m = m.WhereOr("username", req.Username)
 		}
@@ -365,10 +362,10 @@ func (s *sUser) UserUpdateProfile(ctx context.Context, req *entity.UserUpdatePro
 		}
 		count, err := m.Count()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking unique fields")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your information. Please try again.")
 		}
 		if count > 0 {
-			return nil, gerror.NewCode(consts.CodeEmailExists, "Username, email, or phone already exists")
+			return nil, gerror.NewCode(consts.CodeEmailExists, "This username, email, or phone number is already in use.")
 		}
 	}
 
@@ -399,14 +396,14 @@ func (s *sUser) UserUpdateProfile(ctx context.Context, req *entity.UserUpdatePro
 	if req.Password != "" {
 		hashedPwd, err := s.HashPassword(req.Password)
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeHashPasswordFailed, "Error hashing password")
+			return nil, gerror.NewCode(consts.CodeHashPasswordFailed, "Unable to process your password. Please try again.")
 		}
 		data["password_hash"] = hashedPwd
 	}
 
 	_, err = dao.Users.Ctx(ctx).Where("id", userIDStr).Where("deleted_at IS NULL").Data(data).Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeFailedToUpdate, "Error updating profile")
+		return nil, gerror.NewCode(consts.CodeFailedToUpdate, "Something went wrong while updating your profile. Please try again later.")
 	}
 
 	res = &entity.UserUpdateProfileRes{
@@ -419,21 +416,21 @@ func (s *sUser) UserUpdateProfile(ctx context.Context, req *entity.UserUpdatePro
 func (s *sUser) GetAllUsers(ctx context.Context, req *entity.UserListReq) (res *entity.UserListRes, err error) {
 	userIDStr := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userIDStr == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view users.")
 	}
 
-	currentUser, err := dao.Users.Ctx(ctx).Where("id", userIDStr).One()
+	currentUser, err := dao.Users.Ctx(ctx).Where("id", userIDStr).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load users. Please try again later.")
 	}
 	if currentUser.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 	if currentUser["role"].String() != consts.RoleAdmin {
-		return nil, gerror.NewCode(consts.CodeNotAdmin, "Only admins can list users")
+		return nil, gerror.NewCode(consts.CodeNotAdmin, "Only admins can view the user list.")
 	}
 
-	m := dao.Users.Ctx(ctx)
+	m := dao.Users.Ctx(ctx).Where("deleted_at IS NULL")
 	if req.Username != "" {
 		m = m.WhereLike("username", "%"+req.Username+"%")
 	}
@@ -446,7 +443,7 @@ func (s *sUser) GetAllUsers(ctx context.Context, req *entity.UserListReq) (res *
 
 	total, err := m.Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error counting users")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load users. Please try again later.")
 	}
 
 	if req.Page <= 0 {
@@ -459,12 +456,13 @@ func (s *sUser) GetAllUsers(ctx context.Context, req *entity.UserListReq) (res *
 
 	users, err := dao.Users.Ctx(ctx).
 		Fields("id", "username", "email", "phone", "full_name", "gender", "birth_date", "role", "avatar_url", "wallet_balance", "created_at", "updated_at").
+		Where("deleted_at IS NULL").
 		Offset(offset).
 		Limit(req.PageSize).
 		Order("created_at DESC").
 		All()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving users")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load users. Please try again later.")
 	}
 
 	userList := make([]entity.UserItem, 0, len(users))
@@ -497,34 +495,34 @@ func (s *sUser) GetAllUsers(ctx context.Context, req *entity.UserListReq) (res *
 func (s *sUser) DeleteUser(ctx context.Context, req *entity.UserDeleteReq) (res *entity.UserDeleteRes, err error) {
 	userIDStr := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userIDStr == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to delete a user.")
 	}
 
 	currentUser, err := dao.Users.Ctx(ctx).Where("id", userIDStr).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the user. Please try again later.")
 	}
 	if currentUser.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 	if currentUser["role"].String() != consts.RoleAdmin {
-		return nil, gerror.NewCode(consts.CodeNotAdmin, "Only admins can delete users")
+		return nil, gerror.NewCode(consts.CodeNotAdmin, "Only admins can delete users.")
 	}
 
-	userRecord, err := dao.Users.Ctx(ctx).Where("id", req.UserId).One()
+	userRecord, err := dao.Users.Ctx(ctx).Where("id", req.UserId).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking target user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the user. Please try again later.")
 	}
 	if userRecord.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "Target user not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "The account could not be found. Please contact support.")
 	}
 	if userRecord["id"].String() == userIDStr {
-		return nil, gerror.NewCode(consts.CodeCannotDeleteSelf, "Cannot delete your own account")
+		return nil, gerror.NewCode(consts.CodeCannotDeleteSelf, "You cannot delete your own account.")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the user. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -532,42 +530,57 @@ func (s *sUser) DeleteUser(ctx context.Context, req *entity.UserDeleteReq) (res 
 		}
 	}()
 
-	// Delete related data
-	_, err = dao.WalletTransactions.Ctx(ctx).TX(tx).Where("user_id", req.UserId).Delete()
+	_, err = dao.WalletTransactions.Ctx(ctx).TX(tx).Where("user_id", req.UserId).Data(g.Map{
+		"deleted_at": gtime.Now(),
+		"updated_at": gtime.Now(),
+	}).Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting wallet transactions")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the user. Please try again later.")
 	}
-	_, err = dao.Vehicles.Ctx(ctx).TX(tx).Where("user_id", req.UserId).Delete()
+	_, err = dao.Vehicles.Ctx(ctx).TX(tx).Where("user_id", req.UserId).Data(g.Map{
+		"deleted_at": gtime.Now(),
+		"updated_at": gtime.Now(),
+	}).Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting vehicles")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the user. Please try again later.")
 	}
-	_, err = dao.Favorites.Ctx(ctx).TX(tx).Where("user_id", req.UserId).Delete()
+	_, err = dao.Favorites.Ctx(ctx).TX(tx).Where("user_id", req.UserId).Data(g.Map{
+		"deleted_at": gtime.Now(),
+		"updated_at": gtime.Now(),
+	}).Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting favorites")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the user. Please try again later.")
 	}
-	_, err = dao.ParkingOrders.Ctx(ctx).TX(tx).Where("user_id", req.UserId).Delete()
+	_, err = dao.ParkingOrders.Ctx(ctx).TX(tx).Where("user_id", req.UserId).Data(g.Map{
+		"deleted_at": gtime.Now(),
+		"updated_at": gtime.Now(),
+	}).Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting parking orders")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the user. Please try again later.")
 	}
-	_, err = dao.OthersServiceOrders.Ctx(ctx).TX(tx).Where("user_id", req.UserId).Delete()
+	_, err = dao.OthersServiceOrders.Ctx(ctx).TX(tx).Where("user_id", req.UserId).Data(g.Map{
+		"deleted_at": gtime.Now(),
+		"updated_at": gtime.Now(),
+	}).Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting service orders")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the user. Please try again later.")
 	}
 	_, err = dao.ApiTokens.Ctx(ctx).TX(tx).Where("user_id", req.UserId).Delete()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting user tokens")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the user. Please try again later.")
 	}
 
-	// Delete user
-	_, err = dao.Users.Ctx(ctx).TX(tx).Where("id", req.UserId).Delete()
+	_, err = dao.Users.Ctx(ctx).TX(tx).Where("id", req.UserId).Data(g.Map{
+		"deleted_at": gtime.Now(),
+		"updated_at": gtime.Now(),
+	}).Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the user. Please try again later.")
 	}
 
-	// Notify admins
-	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).All()
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).Where("deleted_at IS NULL").All()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the user. Please try again later.")
 	}
 	for _, admin := range adminUsers {
 		notiData := do.Notifications{
@@ -580,13 +593,13 @@ func (s *sUser) DeleteUser(ctx context.Context, req *entity.UserDeleteReq) (res 
 		}
 		_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the user. Please try again later.")
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the user. Please try again later.")
 	}
 
 	res = &entity.UserDeleteRes{
@@ -598,32 +611,31 @@ func (s *sUser) DeleteUser(ctx context.Context, req *entity.UserDeleteReq) (res 
 func (s *sUser) UpdateUserRole(ctx context.Context, req *entity.UserUpdateRoleReq) (res *entity.UserUpdateRoleRes, err error) {
 	userIDStr := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userIDStr == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to update a user’s role.")
 	}
 
 	currentUser, err := dao.Users.Ctx(ctx).Where("id", userIDStr).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the user’s role. Please try again later.")
 	}
 	if currentUser.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 	if currentUser["role"].String() != consts.RoleAdmin {
-		return nil, gerror.NewCode(consts.CodeNotAdmin, "Only admins can update roles")
+		return nil, gerror.NewCode(consts.CodeNotAdmin, "Only admins can update user roles.")
 	}
 
-	userRecord, err := dao.Users.Ctx(ctx).Where("id", req.UserId).One()
+	userRecord, err := dao.Users.Ctx(ctx).Where("id", req.UserId).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking target user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the user’s role. Please try again later.")
 	}
 	if userRecord.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "Target user not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "The account could not be found. Please contact support.")
 	}
 	if userRecord["id"].String() == userIDStr {
-		return nil, gerror.NewCode(consts.CodeCannotDeleteSelf, "Cannot update your own role")
+		return nil, gerror.NewCode(consts.CodeCannotDeleteSelf, "You cannot update your own role.")
 	}
 
-	// Validate role
 	isValidRole := false
 	for _, validRole := range consts.ValidRoles {
 		if req.Role == validRole {
@@ -632,12 +644,12 @@ func (s *sUser) UpdateUserRole(ctx context.Context, req *entity.UserUpdateRoleRe
 		}
 	}
 	if !isValidRole {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Invalid role")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Please select a valid role.")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the user’s role. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -645,25 +657,24 @@ func (s *sUser) UpdateUserRole(ctx context.Context, req *entity.UserUpdateRoleRe
 		}
 	}()
 
-	_, err = dao.Users.Ctx(ctx).TX(tx).Where("id", req.UserId).Data(g.Map{
+	_, err = dao.Users.Ctx(ctx).TX(tx).Where("id", req.UserId).Where("deleted_at IS NULL").Data(g.Map{
 		"role":       req.Role,
 		"updated_at": gtime.Now(),
 	}).Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeFailedToUpdate, "Error updating user role")
+		return nil, gerror.NewCode(consts.CodeFailedToUpdate, "Something went wrong while updating the user’s role. Please try again later.")
 	}
 
 	_, err = dao.ApiTokens.Ctx(ctx).TX(tx).Where("user_id", req.UserId).Data(g.Map{
 		"is_active": false,
 	}).Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error invalidating user tokens")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the user’s role. Please try again later.")
 	}
 
-	// Notify admins
-	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).All()
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).Where("deleted_at IS NULL").All()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the user’s role. Please try again later.")
 	}
 	for _, admin := range adminUsers {
 		notiData := do.Notifications{
@@ -676,13 +687,13 @@ func (s *sUser) UpdateUserRole(ctx context.Context, req *entity.UserUpdateRoleRe
 		}
 		_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the user’s role. Please try again later.")
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the user’s role. Please try again later.")
 	}
 
 	res = &entity.UserUpdateRoleRes{
@@ -694,35 +705,35 @@ func (s *sUser) UpdateUserRole(ctx context.Context, req *entity.UserUpdateRoleRe
 func (s *sUser) UpdateWalletBalance(ctx context.Context, req *entity.UserUpdateWalletBalanceReq) (res *entity.UserUpdateWalletBalanceRes, err error) {
 	userIDStr := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userIDStr == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to update a user’s wallet balance.")
 	}
 
 	currentUser, err := dao.Users.Ctx(ctx).Where("id", userIDStr).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the wallet balance. Please try again later.")
 	}
 	if currentUser.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 	if currentUser["role"].String() != consts.RoleAdmin {
-		return nil, gerror.NewCode(consts.CodeNotAdmin, "Only admins can update wallet balance")
+		return nil, gerror.NewCode(consts.CodeNotAdmin, "Only admins can update wallet balances.")
 	}
 
-	userRecord, err := dao.Users.Ctx(ctx).Where("id", req.UserId).One()
+	userRecord, err := dao.Users.Ctx(ctx).Where("id", req.UserId).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking target user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the wallet balance. Please try again later.")
 	}
 	if userRecord.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "Target user not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "The account could not be found. Please contact support.")
 	}
 
 	if req.WalletBalance < 0 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Wallet balance cannot be negative")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "The wallet balance cannot be negative.")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the wallet balance. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -747,22 +758,21 @@ func (s *sUser) UpdateWalletBalance(ctx context.Context, req *entity.UserUpdateW
 		}
 		_, err = dao.WalletTransactions.Ctx(ctx).TX(tx).Data(wtData).Insert()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating wallet transaction")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the wallet balance. Please try again later.")
 		}
 	}
 
-	_, err = dao.Users.Ctx(ctx).TX(tx).Where("id", req.UserId).Data(g.Map{
+	_, err = dao.Users.Ctx(ctx).TX(tx).Where("id", req.UserId).Where("deleted_at IS NULL").Data(g.Map{
 		"wallet_balance": req.WalletBalance,
 		"updated_at":     gtime.Now(),
 	}).Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeFailedToUpdate, "Error updating wallet balance")
+		return nil, gerror.NewCode(consts.CodeFailedToUpdate, "Something went wrong while updating the wallet balance. Please try again later.")
 	}
 
-	// Notify admins
-	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).All()
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).Where("deleted_at IS NULL").All()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the wallet balance. Please try again later.")
 	}
 	for _, admin := range adminUsers {
 		notiData := do.Notifications{
@@ -775,13 +785,13 @@ func (s *sUser) UpdateWalletBalance(ctx context.Context, req *entity.UserUpdateW
 		}
 		_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the wallet balance. Please try again later.")
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the wallet balance. Please try again later.")
 	}
 
 	res = &entity.UserUpdateWalletBalanceRes{
