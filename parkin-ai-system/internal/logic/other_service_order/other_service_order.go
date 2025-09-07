@@ -38,7 +38,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderAddWithUser(ctx context.Context,
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
 
-	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", req.VehicleId).One()
+	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", req.VehicleId).Where("deleted_at is NULL").One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking vehicle")
 	}
@@ -137,7 +137,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderList(ctx context.Context, req *e
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
-	isAdmin := gconv.String(user.Map()["role"]) == "admin"
+	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 
 	m := dao.OthersServiceOrders.Ctx(ctx).
 		Fields("others_service_orders.*, parking_lots.name as lot_name, others_service.name as service_name, vehicles.license_plate as vehicle_plate").
@@ -223,7 +223,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderGet(ctx context.Context, req *en
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
-	isAdmin := gconv.String(user.Map()["role"]) == "admin"
+	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 
 	var order struct {
 		entity.OthersServiceOrders
@@ -281,7 +281,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderUpdate(ctx context.Context, req 
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
 
-	isAdmin := gconv.String(user.Map()["role"]) == "admin"
+	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 
 	order, err := dao.OthersServiceOrders.Ctx(ctx).Where("id", req.Id).One()
 	if err != nil {
@@ -377,6 +377,8 @@ func (s *sOthersServiceOrder) OthersServiceOrderUpdate(ctx context.Context, req 
 		Price:         updatedOrder.Price,
 		PaymentStatus: updatedOrder.PaymentStatus,
 		CreatedAt:     updatedOrder.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt:     updatedOrder.UpdatedAt.Format("2006-01-02 15:04:05"),
+		DeletedAt:     updatedOrder.DeletedAt.Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil
@@ -396,7 +398,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderCancel(ctx context.Context, req 
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
 
-	isAdmin := gconv.String(user.Map()["role"]) == "admin"
+	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 
 	order, err := dao.OthersServiceOrders.Ctx(ctx).Where("id", req.Id).One()
 	if err != nil {

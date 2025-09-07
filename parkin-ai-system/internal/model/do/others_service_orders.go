@@ -22,4 +22,6 @@ type OthersServiceOrders struct {
 	Price         interface{} //
 	PaymentStatus interface{} //
 	CreatedAt     *gtime.Time //
+	UpdatedAt     *gtime.Time //
+	DeletedAt     *gtime.Time //
 }

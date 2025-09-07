@@ -20,6 +20,8 @@ type OthersServiceOrders struct {
 	Price         float64     `json:"price"         orm:"price"          description:""`
 	PaymentStatus string      `json:"paymentStatus" orm:"payment_status" description:""`
 	CreatedAt     *gtime.Time `json:"createdAt"     orm:"created_at"     description:""`
+	UpdatedAt     *gtime.Time `json:"updatedAt"     orm:"updated_at"     description:""`
+	DeletedAt     *gtime.Time `json:"deletedAt"     orm:"deleted_at"     description:""`
 }
 
 type OthersServiceOrderAddReq struct {
@@ -56,6 +58,7 @@ type OthersServiceOrderItem struct {
 	PaymentStatus string  `json:"payment_status"`
 	CreatedAt     string  `json:"created_at"`
 	UpdatedAt     string  `json:"updated_at"`
+	DeletedAt     string  `json:"deleted_at"`
 }
 
 type OthersServiceOrderListRes struct {
