@@ -3,16 +3,17 @@ package parking_lot_review
 import (
 	"context"
 	"fmt"
-	"parkin-ai-system/internal/consts"
-	"parkin-ai-system/internal/dao"
-	"parkin-ai-system/internal/model/do"
-	"parkin-ai-system/internal/model/entity"
-	"parkin-ai-system/internal/service"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
+
+	"parkin-ai-system/internal/consts"
+	"parkin-ai-system/internal/dao"
+	"parkin-ai-system/internal/model/do"
+	"parkin-ai-system/internal/model/entity"
+	"parkin-ai-system/internal/service"
 )
 
 type sParkingLotReview struct{}
@@ -27,47 +28,48 @@ func init() {
 func (s *sParkingLotReview) ParkingLotReviewAdd(ctx context.Context, req *entity.ParkingLotReviewAddReq) (*entity.ParkingLotReviewAddRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to add a review.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
-	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).One()
+	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the parking lot. Please try again.")
 	}
 	if lot.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeParkingLotNotFound, "Parking lot not found")
+		return nil, gerror.NewCode(consts.CodeParkingLotNotFound, "The parking lot could not be found.")
 	}
 
 	count, err := dao.ParkingOrders.Ctx(ctx).
 		Where("user_id", userID).
 		Where("lot_id", req.LotId).
 		Where("status", "completed").
+		Where("deleted_at IS NULL").
 		Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking completed orders")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your parking history. Please try again later.")
 	}
 	if count == 0 {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User must have a completed order to review this parking lot")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "You need a completed booking to review this parking lot.")
 	}
 
 	if req.Rating < 1 || req.Rating > 5 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Rating must be between 1 and 5")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Please provide a rating between 1 and 5.")
 	}
 	if req.Comment != "" && len(req.Comment) > 1000 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Comment must be less than 1000 characters")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Your comment must be less than 1000 characters.")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding your review. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -84,12 +86,12 @@ func (s *sParkingLotReview) ParkingLotReviewAdd(ctx context.Context, req *entity
 	}
 	lastId, err := dao.ParkingLotReviews.Ctx(ctx).TX(tx).Data(data).InsertAndGetId()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating review")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding your review. Please try again later.")
 	}
 
-	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).All()
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).Where("deleted_at IS NULL").All()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding your review. Please try again later.")
 	}
 
 	for _, admin := range adminUsers {
@@ -103,13 +105,13 @@ func (s *sParkingLotReview) ParkingLotReviewAdd(ctx context.Context, req *entity
 		}
 		_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding your review. Please try again later.")
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding your review. Please try again later.")
 	}
 
 	return &entity.ParkingLotReviewAddRes{Id: lastId}, nil
@@ -118,22 +120,24 @@ func (s *sParkingLotReview) ParkingLotReviewAdd(ctx context.Context, req *entity
 func (s *sParkingLotReview) ParkingLotReviewList(ctx context.Context, req *entity.ParkingLotReviewListReq) (*entity.ParkingLotReviewListRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view reviews.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
 	m := dao.ParkingLotReviews.Ctx(ctx).
 		Fields("parking_lot_reviews.*, users.username as username, parking_lots.name as lot_name").
 		LeftJoin("users", "users.id = parking_lot_reviews.user_id").
 		LeftJoin("parking_lots", "parking_lots.id = parking_lot_reviews.lot_id").
-		Where("parking_lots.deleted_at IS NULL")
+		Where("parking_lot_reviews.deleted_at IS NULL").
+		Where("users.deleted_at IS NULL OR users.id IS NULL").
+		Where("parking_lots.deleted_at IS NULL OR parking_lots.id IS NULL")
 
 	if req.LotId != 0 {
 		m = m.Where("parking_lot_reviews.lot_id", req.LotId)
@@ -144,7 +148,7 @@ func (s *sParkingLotReview) ParkingLotReviewList(ctx context.Context, req *entit
 
 	total, err := m.Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error counting reviews")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load reviews. Please try again later.")
 	}
 
 	if req.Page <= 0 {
@@ -162,7 +166,7 @@ func (s *sParkingLotReview) ParkingLotReviewList(ctx context.Context, req *entit
 	}
 	err = m.Order("parking_lot_reviews.id DESC").Scan(&reviews)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving reviews")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load reviews. Please try again later.")
 	}
 
 	list := make([]entity.ParkingLotReviewItem, 0, len(reviews))
@@ -176,6 +180,7 @@ func (s *sParkingLotReview) ParkingLotReviewList(ctx context.Context, req *entit
 			Rating:    r.Rating,
 			Comment:   r.Comment,
 			CreatedAt: r.CreatedAt.Format("2006-01-02 15:04:05"),
+			UpdatedAt: r.UpdatedAt.Format("2006-01-02 15:04:05"),
 		}
 		list = append(list, item)
 	}
@@ -189,15 +194,15 @@ func (s *sParkingLotReview) ParkingLotReviewList(ctx context.Context, req *entit
 func (s *sParkingLotReview) ParkingLotReviewGet(ctx context.Context, req *entity.ParkingLotReviewGetReq) (*entity.ParkingLotReviewItem, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view the review.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
 	var review struct {
@@ -210,18 +215,20 @@ func (s *sParkingLotReview) ParkingLotReviewGet(ctx context.Context, req *entity
 		LeftJoin("users", "users.id = parking_lot_reviews.user_id").
 		LeftJoin("parking_lots", "parking_lots.id = parking_lot_reviews.lot_id").
 		Where("parking_lot_reviews.id", req.Id).
-		Where("parking_lots.deleted_at IS NULL").
+		Where("parking_lot_reviews.deleted_at IS NULL").
+		Where("users.deleted_at IS NULL OR users.id IS NULL").
+		Where("parking_lots.deleted_at IS NULL OR parking_lots.id IS NULL").
 		Scan(&review)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving review")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load the review. Please try again later.")
 	}
 	if review.Id == 0 {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Review not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The review could not be found.")
 	}
 
-	isAdmin := gconv.String(user.Map()["role"]) == "admin"
+	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 	if !isAdmin && review.UserId != gconv.Int64(userID) {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only view your own reviews or must be an admin")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only view your own reviews or must be an admin.")
 	}
 
 	item := entity.ParkingLotReviewItem{
@@ -233,6 +240,7 @@ func (s *sParkingLotReview) ParkingLotReviewGet(ctx context.Context, req *entity
 		Rating:    review.Rating,
 		Comment:   review.Comment,
 		CreatedAt: review.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt: review.UpdatedAt.Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil
@@ -241,50 +249,50 @@ func (s *sParkingLotReview) ParkingLotReviewGet(ctx context.Context, req *entity
 func (s *sParkingLotReview) ParkingLotReviewUpdate(ctx context.Context, req *entity.ParkingLotReviewUpdateReq) (*entity.ParkingLotReviewItem, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to update the review.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
-	review, err := dao.ParkingLotReviews.Ctx(ctx).Where("id", req.Id).One()
+	review, err := dao.ParkingLotReviews.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking review")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the review. Please try again.")
 	}
 	if review.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Review not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The review could not be found.")
 	}
 
-	isAdmin := gconv.String(user.Map()["role"]) == "admin"
+	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 	if !isAdmin && gconv.Int64(review.Map()["user_id"]) != gconv.Int64(userID) {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only update your own reviews or must be an admin")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only update your own reviews or must be an admin.")
 	}
 
 	if req.LotId != 0 {
 		lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).Where("deleted_at IS NULL").One()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking lot")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the parking lot. Please try again.")
 		}
 		if lot.IsEmpty() {
-			return nil, gerror.NewCode(consts.CodeParkingLotNotFound, "Parking lot not found")
+			return nil, gerror.NewCode(consts.CodeParkingLotNotFound, "The parking lot could not be found.")
 		}
 	}
 
 	if req.Rating != 0 && (req.Rating < 1 || req.Rating > 5) {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Rating must be between 1 and 5")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Please provide a rating between 1 and 5.")
 	}
 	if req.Comment != "" && len(req.Comment) > 1000 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Comment must be less than 1000 characters")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Your comment must be less than 1000 characters.")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the review. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -292,7 +300,9 @@ func (s *sParkingLotReview) ParkingLotReviewUpdate(ctx context.Context, req *ent
 		}
 	}()
 
-	updateData := g.Map{}
+	updateData := g.Map{
+		"updated_at": gtime.Now(),
+	}
 	if req.LotId != 0 {
 		updateData["lot_id"] = req.LotId
 	}
@@ -303,14 +313,14 @@ func (s *sParkingLotReview) ParkingLotReviewUpdate(ctx context.Context, req *ent
 		updateData["comment"] = req.Comment
 	}
 
-	_, err = dao.ParkingLotReviews.Ctx(ctx).TX(tx).Data(updateData).Where("id", req.Id).Update()
+	_, err = dao.ParkingLotReviews.Ctx(ctx).TX(tx).Data(updateData).Where("id", req.Id).Where("deleted_at IS NULL").Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating review")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the review. Please try again later.")
 	}
 
-	adminUsers, err := dao.Users.Ctx(ctx).Where("role", "admin").All()
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).Where("deleted_at IS NULL").All()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the review. Please try again later.")
 	}
 
 	for _, admin := range adminUsers {
@@ -324,13 +334,13 @@ func (s *sParkingLotReview) ParkingLotReviewUpdate(ctx context.Context, req *ent
 		}
 		_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the review. Please try again later.")
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the review. Please try again later.")
 	}
 
 	var updatedReview struct {
@@ -343,9 +353,12 @@ func (s *sParkingLotReview) ParkingLotReviewUpdate(ctx context.Context, req *ent
 		LeftJoin("users", "users.id = parking_lot_reviews.user_id").
 		LeftJoin("parking_lots", "parking_lots.id = parking_lot_reviews.lot_id").
 		Where("parking_lot_reviews.id", req.Id).
+		Where("parking_lot_reviews.deleted_at IS NULL").
+		Where("users.deleted_at IS NULL OR users.id IS NULL").
+		Where("parking_lots.deleted_at IS NULL OR parking_lots.id IS NULL").
 		Scan(&updatedReview)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving updated review")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the review. Please try again later.")
 	}
 
 	item := entity.ParkingLotReviewItem{
@@ -357,6 +370,7 @@ func (s *sParkingLotReview) ParkingLotReviewUpdate(ctx context.Context, req *ent
 		Rating:    updatedReview.Rating,
 		Comment:   updatedReview.Comment,
 		CreatedAt: updatedReview.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt: updatedReview.UpdatedAt.Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil
@@ -365,33 +379,33 @@ func (s *sParkingLotReview) ParkingLotReviewUpdate(ctx context.Context, req *ent
 func (s *sParkingLotReview) ParkingLotReviewDelete(ctx context.Context, req *entity.ParkingLotReviewDeleteReq) (*entity.ParkingLotReviewDeleteRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to delete the review.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
-	review, err := dao.ParkingLotReviews.Ctx(ctx).Where("id", req.Id).One()
+	review, err := dao.ParkingLotReviews.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking review")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the review. Please try again.")
 	}
 	if review.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Review not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The review could not be found.")
 	}
 
-	isAdmin := gconv.String(user.Map()["role"]) == "admin"
+	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 	if !isAdmin && gconv.Int64(review.Map()["user_id"]) != gconv.Int64(userID) {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only delete your own reviews or must be an admin")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only delete your own reviews or must be an admin.")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the review. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -399,14 +413,17 @@ func (s *sParkingLotReview) ParkingLotReviewDelete(ctx context.Context, req *ent
 		}
 	}()
 
-	_, err = dao.ParkingLotReviews.Ctx(ctx).TX(tx).Where("id", req.Id).Delete()
+	_, err = dao.ParkingLotReviews.Ctx(ctx).TX(tx).Data(g.Map{
+		"deleted_at": gtime.Now(),
+		"updated_at": gtime.Now(),
+	}).Where("id", req.Id).Where("deleted_at IS NULL").Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting review")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the review. Please try again later.")
 	}
 
-	adminUsers, err := dao.Users.Ctx(ctx).Where("role", "admin").All()
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).Where("deleted_at IS NULL").All()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the review. Please try again later.")
 	}
 
 	for _, admin := range adminUsers {
@@ -420,13 +437,13 @@ func (s *sParkingLotReview) ParkingLotReviewDelete(ctx context.Context, req *ent
 		}
 		_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the review. Please try again later.")
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the review. Please try again later.")
 	}
 
 	return &entity.ParkingLotReviewDeleteRes{Message: "Review deleted successfully"}, nil

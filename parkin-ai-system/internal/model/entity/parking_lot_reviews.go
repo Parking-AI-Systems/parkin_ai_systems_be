@@ -46,6 +46,7 @@ type ParkingLotReviewItem struct {
 	Rating    int    `json:"rating"`
 	Comment   string `json:"comment"`
 	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
 }
 
 type ParkingLotReviewListRes struct {
