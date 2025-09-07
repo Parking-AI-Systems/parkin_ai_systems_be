@@ -37,15 +37,19 @@ func (c *ControllerParking_order) ParkingOrderCancel(ctx context.Context, req *p
 func entityToApiParkingOrderItem(item *entity.ParkingOrderItem) parking_order.ParkingOrderItem {
 	return parking_order.ParkingOrderItem{
 		Id:            item.Id,
+		UserId:        item.UserId,
 		VehicleId:     item.VehicleId,
+		LotName:       item.LotName,
+		SlotCode:      item.SlotCode,
 		LotId:         item.LotId,
 		SlotId:        item.SlotId,
+		VehiclePlate:  item.VehiclePlate,
+		Price:         item.Price,
 		StartTime:     item.StartTime,
 		EndTime:       item.EndTime,
 		Status:        item.Status,
 		CreatedAt:     item.CreatedAt,
 		UpdatedAt:     item.UpdatedAt,
-		Price:         item.Price,
 		PaymentStatus: item.PaymentStatus,
 	}
 }

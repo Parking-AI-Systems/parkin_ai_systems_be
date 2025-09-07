@@ -21,6 +21,7 @@ type ParkingOrders struct {
 	PaymentStatus string      `json:"paymentStatus" orm:"payment_status" description:""`
 	CreatedAt     *gtime.Time `json:"createdAt"     orm:"created_at"     description:""`
 	UpdatedAt     *gtime.Time `json:"updatedAt"     orm:"updated_at"     description:""`
+	DeletedAt     *gtime.Time `json:"deletedAt"     orm:"deleted_at"     description:""`
 	VehicleId     int64       `json:"vehicleId"     orm:"vehicle_id"     description:""`
 }
 

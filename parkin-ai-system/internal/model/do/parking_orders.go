@@ -23,5 +23,6 @@ type ParkingOrders struct {
 	PaymentStatus interface{} //
 	CreatedAt     *gtime.Time //
 	UpdatedAt     *gtime.Time //
+	DeletedAt     *gtime.Time //
 	VehicleId     interface{} //
 }

@@ -129,9 +129,7 @@ func (s *sParkingOrder) ParkingOrderAddWithUser(ctx context.Context, req *entity
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating parking slot")
 	}
 
-	_, err = dao.ParkingLots.Ctx(ctx).TX(tx).Data(g.Map{
-		"available_slots": g.DB().Raw("available_slots - 1"),
-	}).Where("id", req.LotId).Update()
+	_, err = tx.Exec("UPDATE parking_lots SET available_slots = available_slots - 1, updated_at = ? WHERE id = ?", gtime.Now(), req.LotId)
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating parking lot")
 	}
@@ -172,14 +170,43 @@ func (s *sParkingOrder) ParkingOrderList(ctx context.Context, req *entity.Parkin
 	}
 	isAdmin := gconv.String(user.Map()["role"]) == "admin"
 
-	// Build query
+	// Build base query for joins and where conditions
+	baseQuery := dao.ParkingOrders.Ctx(ctx).
+		LeftJoin("parking_lots", "parking_lots.id = parking_orders.lot_id").
+		LeftJoin("parking_slots", "parking_slots.id = parking_orders.slot_id").
+		LeftJoin("vehicles", "vehicles.id = parking_orders.vehicle_id")
+
+	// Apply filters
+	if req.UserId != 0 {
+		if !isAdmin && gconv.Int64(userID) != req.UserId {
+			return nil, gerror.NewCode(consts.CodeUnauthorized, "Cannot access orders of other users")
+		}
+		baseQuery = baseQuery.Where("parking_orders.user_id", req.UserId)
+	} else if !isAdmin {
+		// Non-admin users can only see their own orders
+		baseQuery = baseQuery.Where("parking_orders.user_id", userID)
+	}
+	if req.LotId != 0 {
+		baseQuery = baseQuery.Where("parking_orders.lot_id", req.LotId)
+	}
+	if req.Status != "" {
+		baseQuery = baseQuery.Where("parking_orders.status", req.Status)
+	}
+
+	// Get total count for pagination
+	total, err := baseQuery.Count()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error counting orders")
+	}
+
+	// Build data query with fields
 	m := dao.ParkingOrders.Ctx(ctx).
 		Fields("parking_orders.*, parking_lots.name as lot_name, parking_slots.code as slot_code, vehicles.license_plate as vehicle_plate").
 		LeftJoin("parking_lots", "parking_lots.id = parking_orders.lot_id").
 		LeftJoin("parking_slots", "parking_slots.id = parking_orders.slot_id").
 		LeftJoin("vehicles", "vehicles.id = parking_orders.vehicle_id")
 
-	// Apply filters
+	// Apply same filters to data query
 	if req.UserId != 0 {
 		if !isAdmin && gconv.Int64(userID) != req.UserId {
 			return nil, gerror.NewCode(consts.CodeUnauthorized, "Cannot access orders of other users")
@@ -194,12 +221,6 @@ func (s *sParkingOrder) ParkingOrderList(ctx context.Context, req *entity.Parkin
 	}
 	if req.Status != "" {
 		m = m.Where("parking_orders.status", req.Status)
-	}
-
-	// Get total count for pagination
-	total, err := m.Count()
-	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error counting orders")
 	}
 
 	// Apply pagination
@@ -526,9 +547,7 @@ func (s *sParkingOrder) ParkingOrderCancel(ctx context.Context, req *entity.Park
 	}
 
 	// Update lot available slots
-	_, err = dao.ParkingLots.Ctx(ctx).TX(tx).Data(g.Map{
-		"available_slots": g.DB().Raw("available_slots + 1"),
-	}).Where("id", order.Map()["lot_id"]).Update()
+	_, err = tx.Exec("UPDATE parking_lots SET available_slots = available_slots + 1, updated_at = ? WHERE id = ?", gtime.Now(), order.Map()["lot_id"])
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating parking lot")
 	}
@@ -652,9 +671,7 @@ func (s *sParkingOrder) ParkingOrderDelete(ctx context.Context, req *entity.Park
 	}
 
 	// Update lot available slots
-	_, err = dao.ParkingLots.Ctx(ctx).TX(tx).Data(g.Map{
-		"available_slots": g.DB().Raw("available_slots + 1"),
-	}).Where("id", order.Map()["lot_id"]).Update()
+	_, err = tx.Exec("UPDATE parking_lots SET available_slots = available_slots + 1, updated_at = ? WHERE id = ?", gtime.Now(), order.Map()["lot_id"])
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating parking lot")
 	}
@@ -699,7 +716,7 @@ func (s *sParkingOrder) ParkingOrderPayment(ctx context.Context, req *entity.Par
 	}
 
 	// Check if order exists and user has access
-	order, err := dao.ParkingOrders.Ctx(ctx).Where("id", req.Id).One()
+	order, err := dao.ParkingOrders.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking order")
 	}
@@ -739,9 +756,7 @@ func (s *sParkingOrder) ParkingOrderPayment(ctx context.Context, req *entity.Par
 	}
 
 	// Deduct wallet balance
-	_, err = dao.Users.Ctx(ctx).TX(tx).Data(g.Map{
-		"wallet_balance": g.DB().Raw("wallet_balance - ?", order.Map()["price"]),
-	}).Where("id", userID).Update()
+	_, err = tx.Exec("UPDATE users SET wallet_balance = wallet_balance - ?, updated_at = ? WHERE id = ?", order.Map()["price"], gtime.Now(), userID)
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating wallet balance")
 	}
