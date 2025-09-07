@@ -295,7 +295,7 @@ func (s *sOthersService) OthersServiceUpdate(ctx context.Context, req *entity.Ot
 	if req.IsActive != nil {
 		updateData["is_active"] = req.IsActive
 	}
-
+	updateData["updated_at"] = gtime.Now()
 	_, err = dao.OthersService.Ctx(ctx).TX(tx).Data(updateData).Where("id", req.Id).Update()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating service")
@@ -342,6 +342,8 @@ func (s *sOthersService) OthersServiceUpdate(ctx context.Context, req *entity.Ot
 		DurationMinutes: updatedSvc.DurationMinutes,
 		IsActive:        updatedSvc.IsActive,
 		CreatedAt:       updatedSvc.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt:       updatedSvc.UpdatedAt.Format("2006-01-02 15:04:05"),
+		DeletedAt:       updatedSvc.DeletedAt.Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil
@@ -393,11 +395,12 @@ func (s *sOthersService) OthersServiceDelete(ctx context.Context, req *entity.Ot
 		}
 	}()
 
-	_, err = dao.OthersService.Ctx(ctx).TX(tx).Where("id", req.Id).Delete()
+	_, err = dao.OthersService.Ctx(ctx).TX(tx).Data(g.Map{
+		"deleted_at": gtime.Now(),
+	}).Where("id", req.Id).Update()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting service")
 	}
-
 	notiData := do.Notifications{
 		UserId:         userID,
 		Type:           "others_service_deleted",

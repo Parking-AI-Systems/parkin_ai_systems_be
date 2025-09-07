@@ -18,6 +18,8 @@ type OthersService struct {
 	DurationMinutes int         `json:"durationMinutes" orm:"duration_minutes" description:""`
 	IsActive        bool        `json:"isActive"        orm:"is_active"        description:""`
 	CreatedAt       *gtime.Time `json:"createdAt"       orm:"created_at"       description:""`
+	UpdatedAt       *gtime.Time `json:"updatedAt"       orm:"updated_at"       description:""`
+	DeletedAt      *gtime.Time `json:"deletedAt"      orm:"deleted_at"      description:""`
 }
 
 type OthersServiceAddReq struct {
@@ -50,6 +52,8 @@ type OthersServiceItem struct {
 	DurationMinutes int     `json:"duration_minutes"`
 	IsActive        bool    `json:"is_active"`
 	CreatedAt       string  `json:"created_at"`
+	UpdatedAt       string  `json:"updated_at"`
+	DeletedAt       string  `json:"deleted_at"`
 }
 
 type OthersServiceListRes struct {

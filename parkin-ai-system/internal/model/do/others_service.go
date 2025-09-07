@@ -20,4 +20,6 @@ type OthersService struct {
 	DurationMinutes interface{} //
 	IsActive        interface{} //
 	CreatedAt       *gtime.Time //
+	UpdatedAt       *gtime.Time //
+	DeletedAt       *gtime.Time //
 }
