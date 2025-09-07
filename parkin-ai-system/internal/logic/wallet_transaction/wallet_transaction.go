@@ -166,8 +166,8 @@ func (s *sWalletTransaction) WalletTransactionList(ctx context.Context, req *ent
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
-	m := dao.WalletTransactions.Ctx(ctx).
-		Fields("wallet_transactions.*, users.username, parking_orders.vehicle_id, others_service_orders.service_id").
+	// Build base query for count
+	baseQuery := dao.WalletTransactions.Ctx(ctx).
 		LeftJoin("users", "users.id = wallet_transactions.user_id").
 		LeftJoin("parking_orders", "parking_orders.id = wallet_transactions.related_order_id").
 		LeftJoin("others_service_orders", "others_service_orders.id = wallet_transactions.related_order_id").
@@ -178,6 +178,33 @@ func (s *sWalletTransaction) WalletTransactionList(ctx context.Context, req *ent
 
 	isAdmin := gconv.String(user.Map()["role"]) == "admin"
 	if !isAdmin {
+		baseQuery = baseQuery.Where("wallet_transactions.user_id", userID)
+	}
+
+	if req.Type != "" {
+		baseQuery = baseQuery.Where("wallet_transactions.type", req.Type)
+	}
+	if req.Description != "" {
+		baseQuery = baseQuery.WhereLike("wallet_transactions.description", "%"+req.Description+"%")
+	}
+
+	total, err := baseQuery.Count()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load transactions. Please try again later.")
+	}
+
+	// Build data query with fields
+	m := dao.WalletTransactions.Ctx(ctx).
+		Fields("wallet_transactions.*, users.username, parking_orders.vehicle_id, others_service_orders.service_id").
+		LeftJoin("users", "users.id = wallet_transactions.user_id").
+		LeftJoin("parking_orders", "parking_orders.id = wallet_transactions.related_order_id").
+		LeftJoin("others_service_orders", "others_service_orders.id = wallet_transactions.related_order_id").
+		Where("wallet_transactions.deleted_at IS NULL").
+		Where("users.deleted_at IS NULL OR users.deleted_at IS NOT NULL").
+		Where("parking_orders.deleted_at IS NULL OR parking_orders.deleted_at IS NOT NULL").
+		Where("others_service_orders.deleted_at IS NULL OR others_service_orders.deleted_at IS NOT NULL")
+
+	if !isAdmin {
 		m = m.Where("wallet_transactions.user_id", userID)
 	}
 
@@ -186,11 +213,6 @@ func (s *sWalletTransaction) WalletTransactionList(ctx context.Context, req *ent
 	}
 	if req.Description != "" {
 		m = m.WhereLike("wallet_transactions.description", "%"+req.Description+"%")
-	}
-
-	total, err := m.Count()
-	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load transactions. Please try again later.")
 	}
 
 	if req.Page <= 0 {

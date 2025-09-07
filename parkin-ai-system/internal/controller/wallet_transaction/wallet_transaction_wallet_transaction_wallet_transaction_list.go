@@ -34,6 +34,7 @@ func (c *ControllerWallet_transaction) WalletTransactionList(ctx context.Context
 		res.List = append(res.List, wallet_transaction.WalletTransactionItem{
 			Id:             item.Id,
 			UserId:         item.UserId,
+			Username:       item.Username,
 			Amount:         item.Amount,
 			Type:           item.Type,
 			Description:    item.Description,

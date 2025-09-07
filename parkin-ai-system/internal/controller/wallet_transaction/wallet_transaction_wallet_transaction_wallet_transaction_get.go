@@ -27,6 +27,7 @@ func (c *ControllerWallet_transaction) WalletTransactionGet(ctx context.Context,
 		Transaction: wallet_transaction.WalletTransactionItem{
 			Id:             tx.Id,
 			UserId:         tx.UserId,
+			Username:       tx.Username,
 			Amount:         tx.Amount,
 			Type:           tx.Type,
 			Description:    tx.Description,

@@ -30,6 +30,8 @@ func (c *ControllerParking_lot_review) ParkingLotReviewUpdate(ctx context.Contex
 			Id:        updateRes.Id,
 			LotId:     updateRes.LotId,
 			UserId:    updateRes.UserId,
+			LotName:   updateRes.LotName,
+			Username:  updateRes.Username,
 			Rating:    updateRes.Rating,
 			Comment:   updateRes.Comment,
 			CreatedAt: updateRes.CreatedAt,

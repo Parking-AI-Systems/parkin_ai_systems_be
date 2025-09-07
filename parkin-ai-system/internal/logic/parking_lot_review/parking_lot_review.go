@@ -131,6 +131,27 @@ func (s *sParkingLotReview) ParkingLotReviewList(ctx context.Context, req *entit
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
+	// Build base query for count
+	baseQuery := dao.ParkingLotReviews.Ctx(ctx).
+		LeftJoin("users", "users.id = parking_lot_reviews.user_id").
+		LeftJoin("parking_lots", "parking_lots.id = parking_lot_reviews.lot_id").
+		Where("parking_lot_reviews.deleted_at IS NULL").
+		Where("users.deleted_at IS NULL OR users.id IS NULL").
+		Where("parking_lots.deleted_at IS NULL OR parking_lots.id IS NULL")
+
+	if req.LotId != 0 {
+		baseQuery = baseQuery.Where("parking_lot_reviews.lot_id", req.LotId)
+	}
+	if req.Rating != 0 {
+		baseQuery = baseQuery.Where("parking_lot_reviews.rating", req.Rating)
+	}
+
+	total, err := baseQuery.Count()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load reviews. Please try again later.")
+	}
+
+	// Build data query with fields
 	m := dao.ParkingLotReviews.Ctx(ctx).
 		Fields("parking_lot_reviews.*, users.username as username, parking_lots.name as lot_name").
 		LeftJoin("users", "users.id = parking_lot_reviews.user_id").
@@ -144,11 +165,6 @@ func (s *sParkingLotReview) ParkingLotReviewList(ctx context.Context, req *entit
 	}
 	if req.Rating != 0 {
 		m = m.Where("parking_lot_reviews.rating", req.Rating)
-	}
-
-	total, err := m.Count()
-	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load reviews. Please try again later.")
 	}
 
 	if req.Page <= 0 {
