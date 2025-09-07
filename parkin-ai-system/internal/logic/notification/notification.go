@@ -3,16 +3,17 @@ package notification
 import (
 	"context"
 	"fmt"
-	"parkin-ai-system/internal/consts"
-	"parkin-ai-system/internal/dao"
-	"parkin-ai-system/internal/model/do"
-	"parkin-ai-system/internal/model/entity"
-	"parkin-ai-system/internal/service"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
+
+	"parkin-ai-system/internal/consts"
+	"parkin-ai-system/internal/dao"
+	"parkin-ai-system/internal/model/do"
+	"parkin-ai-system/internal/model/entity"
+	"parkin-ai-system/internal/service"
 )
 
 type sNotification struct{}
@@ -27,15 +28,15 @@ func init() {
 func (s *sNotification) NotificationList(ctx context.Context, req *entity.NotificationListReq) (*entity.NotificationListRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view your notifications.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
 	// Base query builder for joins and where conditions
@@ -43,7 +44,11 @@ func (s *sNotification) NotificationList(ctx context.Context, req *entity.Notifi
 		LeftJoin("parking_lots", "parking_lots.id = notifications.related_order_id AND notifications.type LIKE 'parking_lot%'").
 		LeftJoin("parking_orders", "parking_orders.id = notifications.related_order_id AND notifications.type LIKE 'parking_order%'").
 		LeftJoin("others_service", "others_service.id = notifications.related_order_id AND notifications.type LIKE 'others_service%'").
-		Where("notifications.user_id", userID)
+		Where("notifications.user_id", userID).
+		Where("notifications.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL OR parking_lots.id IS NULL").
+		Where("parking_orders.deleted_at IS NULL OR parking_orders.id IS NULL").
+		Where("others_service.deleted_at IS NULL OR others_service.id IS NULL")
 
 	if req.IsRead != nil {
 		baseQuery = baseQuery.Where("notifications.is_read", *req.IsRead)
@@ -52,7 +57,7 @@ func (s *sNotification) NotificationList(ctx context.Context, req *entity.Notifi
 	// Count query - no fields needed for count
 	total, err := baseQuery.Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error counting notifications")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load your notifications. Please try again later.")
 	}
 
 	// Data query with fields
@@ -61,7 +66,11 @@ func (s *sNotification) NotificationList(ctx context.Context, req *entity.Notifi
 		LeftJoin("parking_lots", "parking_lots.id = notifications.related_order_id AND notifications.type LIKE 'parking_lot%'").
 		LeftJoin("parking_orders", "parking_orders.id = notifications.related_order_id AND notifications.type LIKE 'parking_order%'").
 		LeftJoin("others_service", "others_service.id = notifications.related_order_id AND notifications.type LIKE 'others_service%'").
-		Where("notifications.user_id", userID)
+		Where("notifications.user_id", userID).
+		Where("notifications.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL OR parking_lots.id IS NULL").
+		Where("parking_orders.deleted_at IS NULL OR parking_orders.id IS NULL").
+		Where("others_service.deleted_at IS NULL OR others_service.id IS NULL")
 
 	if req.IsRead != nil {
 		m = m.Where("notifications.is_read", *req.IsRead)
@@ -83,7 +92,7 @@ func (s *sNotification) NotificationList(ctx context.Context, req *entity.Notifi
 	}
 	err = m.Order("notifications.id DESC").Scan(&notifications)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving notifications")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load your notifications. Please try again later.")
 	}
 
 	list := make([]entity.NotificationItem, 0, len(notifications))
@@ -128,15 +137,15 @@ func getRelatedInfo(notificationType, lotName, orderNumber, serviceName string) 
 func (s *sNotification) NotificationGet(ctx context.Context, req *entity.NotificationGetReq) (*entity.NotificationItem, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view the notification.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
 	var notification struct {
@@ -152,12 +161,16 @@ func (s *sNotification) NotificationGet(ctx context.Context, req *entity.Notific
 		LeftJoin("others_service", "others_service.id = notifications.related_order_id AND notifications.type LIKE 'others_service%'").
 		Where("notifications.id", req.Id).
 		Where("notifications.user_id", userID).
+		Where("notifications.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL OR parking_lots.id IS NULL").
+		Where("parking_orders.deleted_at IS NULL OR parking_orders.id IS NULL").
+		Where("others_service.deleted_at IS NULL OR others_service.id IS NULL").
 		Scan(&notification)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving notification")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load the notification. Please try again later.")
 	}
 	if notification.Id == 0 {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Notification not found or not authorized")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The notification could not be found or you are not authorized to view it.")
 	}
 
 	item := entity.NotificationItem{
@@ -177,24 +190,24 @@ func (s *sNotification) NotificationGet(ctx context.Context, req *entity.Notific
 func (s *sNotification) NotificationMarkRead(ctx context.Context, req *entity.NotificationMarkReadReq) (*entity.NotificationMarkReadRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to mark notifications as read.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
 	if len(req.Ids) == 0 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "At least one notification ID is required")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Please provide at least one notification ID.")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while marking notifications as read. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -206,26 +219,31 @@ func (s *sNotification) NotificationMarkRead(ctx context.Context, req *entity.No
 		Where("id IN (?)", req.Ids).
 		Where("user_id", userID).
 		Where("is_read", false).
+		Where("deleted_at IS NULL").
 		Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking notifications")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the notifications. Please try again.")
 	}
 	if count == 0 {
-		return nil, gerror.NewCode(consts.CodeNotFound, "No unread notifications found or not authorized")
+		return nil, gerror.NewCode(consts.CodeNotFound, "No unread notifications were found, or you are not authorized to mark them.")
 	}
 
 	_, err = dao.Notifications.Ctx(ctx).TX(tx).
-		Data(g.Map{"is_read": true}).
+		Data(g.Map{
+			"is_read":    true,
+			"updated_at": gtime.Now(),
+		}).
 		Where("id IN (?)", req.Ids).
 		Where("user_id", userID).
+		Where("deleted_at IS NULL").
 		Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error marking notifications as read")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while marking notifications as read. Please try again later.")
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while marking notifications as read. Please try again later.")
 	}
 
 	return &entity.NotificationMarkReadRes{Message: fmt.Sprintf("%d notifications marked as read", count)}, nil
@@ -234,31 +252,31 @@ func (s *sNotification) NotificationMarkRead(ctx context.Context, req *entity.No
 func (s *sNotification) NotificationDelete(ctx context.Context, req *entity.NotificationDeleteReq) (*entity.NotificationDeleteRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to delete a notification.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can delete notifications")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can delete notifications.")
 	}
 
-	notification, err := dao.Notifications.Ctx(ctx).Where("id", req.Id).One()
+	notification, err := dao.Notifications.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking notification")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the notification. Please try again.")
 	}
 	if notification.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Notification not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The notification could not be found.")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the notification. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -266,9 +284,12 @@ func (s *sNotification) NotificationDelete(ctx context.Context, req *entity.Noti
 		}
 	}()
 
-	_, err = dao.Notifications.Ctx(ctx).TX(tx).Where("id", req.Id).Delete()
+	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(g.Map{
+		"deleted_at": gtime.Now(),
+		"updated_at": gtime.Now(),
+	}).Where("id", req.Id).Where("deleted_at IS NULL").Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting notification")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the notification. Please try again later.")
 	}
 
 	adminNotiData := do.Notifications{
@@ -281,12 +302,12 @@ func (s *sNotification) NotificationDelete(ctx context.Context, req *entity.Noti
 	}
 	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(adminNotiData).Insert()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating admin notification")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the notification. Please try again later.")
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the notification. Please try again later.")
 	}
 
 	return &entity.NotificationDeleteRes{Message: "Notification deleted successfully"}, nil
