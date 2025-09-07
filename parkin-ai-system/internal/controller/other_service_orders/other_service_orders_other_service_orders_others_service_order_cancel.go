@@ -45,5 +45,6 @@ func entityToApiServiceOrderItem(item *entity.OthersServiceOrderItem) other_serv
 		UpdatedAt:     item.UpdatedAt,
 		Price:         item.Price,
 		PaymentStatus: item.PaymentStatus,
+		DeletedAt:     item.DeletedAt,
 	}
 }

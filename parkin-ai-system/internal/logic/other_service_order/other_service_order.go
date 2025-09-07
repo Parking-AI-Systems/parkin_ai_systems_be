@@ -30,7 +30,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderAddWithUser(ctx context.Context,
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to create a service order")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at is NULL").One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking user details")
 	}
@@ -38,7 +38,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderAddWithUser(ctx context.Context,
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
 
-	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", req.VehicleId).Where("deleted_at is NULL").One()
+	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", req.VehicleId).Where("deleted_at IS NULL").One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking vehicle details")
 	}
@@ -46,7 +46,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderAddWithUser(ctx context.Context,
 		return nil, gerror.NewCode(consts.CodeVehicleNotFound, "Vehicle not found")
 	}
 
-	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).Where("deleted_at is NULL").One()
+	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).Where("deleted_at IS NULL").One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking parking lot details")
 	}
@@ -54,7 +54,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderAddWithUser(ctx context.Context,
 		return nil, gerror.NewCode(consts.CodeParkingLotNotFound, "Parking lot not found")
 	}
 
-	service, err := dao.OthersService.Ctx(ctx).Where("id", req.ServiceId).Where("deleted_at is NULL").One()
+	service, err := dao.OthersService.Ctx(ctx).Where("id", req.ServiceId).Where("deleted_at IS NULL").One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking service details")
 	}
@@ -130,7 +130,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderList(ctx context.Context, req *e
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view service orders")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at is NULL").One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking user details")
 	}
@@ -143,7 +143,11 @@ func (s *sOthersServiceOrder) OthersServiceOrderList(ctx context.Context, req *e
 		Fields("others_service_orders.*, parking_lots.name as lot_name, others_service.name as service_name, vehicles.license_plate as vehicle_plate").
 		LeftJoin("parking_lots", "parking_lots.id = others_service_orders.lot_id").
 		LeftJoin("others_service", "others_service.id = others_service_orders.service_id").
-		LeftJoin("vehicles", "vehicles.id = others_service_orders.vehicle_id")
+		LeftJoin("vehicles", "vehicles.id = others_service_orders.vehicle_id").
+		Where("others_service_orders.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL").
+		Where("others_service.deleted_at IS NULL").
+		Where("vehicles.deleted_at IS NULL")
 
 	if req.UserId != 0 {
 		if !isAdmin && gconv.Int64(userID) != req.UserId {
@@ -238,7 +242,11 @@ func (s *sOthersServiceOrder) OthersServiceOrderGet(ctx context.Context, req *en
 		LeftJoin("parking_lots", "parking_lots.id = others_service_orders.lot_id").
 		LeftJoin("others_service", "others_service.id = others_service_orders.service_id").
 		LeftJoin("vehicles", "vehicles.id = others_service_orders.vehicle_id").
-		Where("others_service_orders.id", req.Id)
+		Where("others_service_orders.id", req.Id).
+		Where("others_service_orders.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL").
+		Where("others_service.deleted_at IS NULL").
+		Where("vehicles.deleted_at IS NULL")
 	if !isAdmin {
 		m = m.Where("others_service_orders.user_id", userID)
 	}
@@ -362,6 +370,10 @@ func (s *sOthersServiceOrder) OthersServiceOrderUpdate(ctx context.Context, req 
 		LeftJoin("others_service", "others_service.id = others_service_orders.service_id").
 		LeftJoin("vehicles", "vehicles.id = others_service_orders.vehicle_id").
 		Where("others_service_orders.id", req.Id).
+		Where("others_service_orders.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL").
+		Where("others_service.deleted_at IS NULL").
+		Where("vehicles.deleted_at IS NULL").
 		Scan(&updatedOrder)
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while retrieving the updated order")
@@ -466,6 +478,10 @@ func (s *sOthersServiceOrder) OthersServiceOrderCancel(ctx context.Context, req 
 		LeftJoin("others_service", "others_service.id = others_service_orders.service_id").
 		LeftJoin("vehicles", "vehicles.id = others_service_orders.vehicle_id").
 		Where("others_service_orders.id", req.Id).
+		Where("others_service_orders.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL").
+		Where("others_service.deleted_at IS NULL").
+		Where("vehicles.deleted_at IS NULL").
 		Scan(&updatedOrder)
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while retrieving the updated order")
@@ -656,6 +672,10 @@ func (s *sOthersServiceOrder) OthersServiceOrderPayment(ctx context.Context, req
 		LeftJoin("others_service", "others_service.id = others_service_orders.service_id").
 		LeftJoin("vehicles", "vehicles.id = others_service_orders.vehicle_id").
 		Where("others_service_orders.id", req.Id).
+		Where("others_service_orders.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL").
+		Where("others_service.deleted_at IS NULL").
+		Where("vehicles.deleted_at IS NULL").
 		Scan(&updatedOrder)
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while retrieving the updated order")

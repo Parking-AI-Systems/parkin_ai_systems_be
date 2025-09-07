@@ -38,6 +38,7 @@ type OthersServiceOrderItem struct {
 	PaymentStatus string  `json:"payment_status"`
 	CreatedAt     string  `json:"created_at"`
 	UpdatedAt     string  `json:"updated_at"`
+	DeletedAt     string  `json:"deleted_at,omitempty"`
 }
 
 type OthersServiceOrderListRes struct {
