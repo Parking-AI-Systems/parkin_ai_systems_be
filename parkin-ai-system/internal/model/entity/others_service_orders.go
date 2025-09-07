@@ -91,3 +91,45 @@ type OthersServiceOrderDeleteRes struct {
 type OthersServiceOrderPaymentReq struct {
 	Id int64 `json:"id"`
 }
+
+type OthersServiceRevenueReq struct {
+	Period    string `json:"period"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+}
+
+type OthersServiceRevenueRes struct {
+	TotalRevenue float64 `json:"total_revenue"`
+}
+
+type OthersServicePopularReq struct {
+	Period    string `json:"period"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+}
+
+type OthersServicePopularRes struct {
+	Services []OthersServicePopularItem `json:"services"`
+}
+
+type OthersServicePopularItem struct {
+	ServiceId  int64  `json:"service_id"`
+	Name       string `json:"name"`
+	OrderCount int64  `json:"order_count"`
+}
+
+type OthersServiceTrendsReq struct {
+	Period    string `json:"period"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+}
+
+type OthersServiceTrendsRes struct {
+	Orders []OthersServiceTrendsItem `json:"orders"`
+	Total  int64                     `json:"total"`
+}
+
+type OthersServiceTrendsItem struct {
+	Date  string `json:"date"`
+	Count int64  `json:"count"`
+}

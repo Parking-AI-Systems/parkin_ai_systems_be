@@ -109,3 +109,58 @@ type ParkingOrderPaymentReq struct {
 type ParkingOrderPaymentRes struct {
 	Order ParkingOrderItem `json:"order"` // Paid parking order details
 }
+
+// New dashboard APIs
+
+// ParkingOrderRevenueReq defines the request structure for retrieving total revenue from parking orders.
+type ParkingOrderRevenueReq struct {
+	g.Meta    `path:"/parking-orders/revenue" tags:"Parking Order" method:"GET" summary:"Get total parking order revenue" description:"Retrieves total revenue from parking orders filtered by period." middleware:"middleware.Auth"`
+	Period    string `json:"period" v:"in:1h,1d,1w,1m,custom#Invalid period value"`                                                                // Period filter (1h, 1d, 1w, 1m, custom)
+	StartTime string `json:"start_time" v:"datetime|required-if:Period,custom#Invalid start time format|Start time is required for custom period"` // Start time (YYYY-MM-DD HH:MM:SS) for custom period
+	EndTime   string `json:"end_time" v:"datetime|required-if:Period,custom#Invalid end time format|End time is required for custom period"`       // End time (YYYY-MM-DD HH:MM:SS) for custom period
+}
+
+// ParkingOrderRevenueRes defines the response structure for total revenue.
+type ParkingOrderRevenueRes struct {
+	TotalRevenue float64 `json:"total_revenue"` // Total revenue from parking orders
+}
+
+// ParkingOrderTrendsReq defines the request structure for retrieving parking order trends.
+type ParkingOrderTrendsReq struct {
+	g.Meta    `path:"/parking-orders/trends" tags:"Parking Order" method:"GET" summary:"Get parking order trends" description:"Retrieves parking order trends over time filtered by period, suitable for line charts." middleware:"middleware.Auth"`
+	Period    string `json:"period" v:"in:1h,1d,1w,1m,custom#Invalid period value"`                                                                // Period filter (1h, 1d, 1w, 1m, custom)
+	StartTime string `json:"start_time" v:"datetime|required-if:Period,custom#Invalid start time format|Start time is required for custom period"` // Start time (YYYY-MM-DD HH:MM:SS) for custom period
+	EndTime   string `json:"end_time" v:"datetime|required-if:Period,custom#Invalid end time format|End time is required for custom period"`       // End time (YYYY-MM-DD HH:MM:SS) for custom period
+}
+
+// ParkingOrderTrendsRes defines the response structure for parking order trends.
+type ParkingOrderTrendsRes struct {
+	Orders []ParkingOrderTrendsItem `json:"orders"` // List of trend data points
+	Total  int64                    `json:"total"`  // Total number of orders
+}
+
+// ParkingOrderTrendsItem defines an individual trend data point.
+type ParkingOrderTrendsItem struct {
+	Date  string `json:"date"`  // Date (formatted based on period)
+	Count int64  `json:"count"` // Number of orders for the date
+}
+
+// ParkingOrderStatusBreakdownReq defines the request structure for retrieving parking order status breakdown.
+type ParkingOrderStatusBreakdownReq struct {
+	g.Meta    `path:"/parking-orders/status" tags:"Parking Order" method:"GET" summary:"Get parking order status breakdown" description:"Retrieves the distribution of parking order statuses filtered by period." middleware:"middleware.Auth"`
+	Period    string `json:"period" v:"in:1h,1d,1w,1m,custom#Invalid period value"`                                                                // Period filter (1h, 1d, 1w, 1m, custom)
+	StartTime string `json:"start_time" v:"datetime|required-if:Period,custom#Invalid start time format|Start time is required for custom period"` // Start time (YYYY-MM-DD HH:MM:SS) for custom period
+	EndTime   string `json:"end_time" v:"datetime|required-if:Period,custom#Invalid end time format|End time is required for custom period"`       // End time (YYYY-MM-DD HH:MM:SS) for custom period
+}
+
+// ParkingOrderStatusBreakdownRes defines the response structure for status breakdown.
+type ParkingOrderStatusBreakdownRes struct {
+	Statuses []ParkingOrderStatusItem `json:"statuses"` // List of status counts
+	Total    int64                    `json:"total"`    // Total number of orders
+}
+
+// ParkingOrderStatusItem defines an individual status count.
+type ParkingOrderStatusItem struct {
+	Status string `json:"status"` // Order status (pending, confirmed, canceled, completed)
+	Count  int64  `json:"count"`  // Number of orders with this status
+}

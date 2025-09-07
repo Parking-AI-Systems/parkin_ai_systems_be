@@ -18,4 +18,7 @@ type IOtherServiceOrdersOther_service_orders interface {
 	OthersServiceOrderCancel(ctx context.Context, req *other_service_orders.OthersServiceOrderCancelReq) (res *other_service_orders.OthersServiceOrderCancelRes, err error)
 	OthersServiceOrderDelete(ctx context.Context, req *other_service_orders.OthersServiceOrderDeleteReq) (res *other_service_orders.OthersServiceOrderDeleteRes, err error)
 	OthersServiceOrderPayment(ctx context.Context, req *other_service_orders.OthersServiceOrderPaymentReq) (res *other_service_orders.OthersServiceOrderPaymentRes, err error)
+	OthersServiceRevenue(ctx context.Context, req *other_service_orders.OthersServiceRevenueReq) (res *other_service_orders.OthersServiceRevenueRes, err error)
+	OthersServicePopular(ctx context.Context, req *other_service_orders.OthersServicePopularReq) (res *other_service_orders.OthersServicePopularRes, err error)
+	OthersServiceTrends(ctx context.Context, req *other_service_orders.OthersServiceTrendsReq) (res *other_service_orders.OthersServiceTrendsRes, err error)
 }

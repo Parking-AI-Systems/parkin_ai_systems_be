@@ -3,6 +3,7 @@ package parking_order
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -808,4 +809,250 @@ func (s *sParkingOrder) ParkingOrderPayment(ctx context.Context, req *entity.Par
 	}
 
 	return &item, nil
+}
+
+// New dashboard API implementations
+
+func (s *sParkingOrder) ParkingOrderRevenue(ctx context.Context, req *entity.ParkingOrderRevenueReq) (*entity.ParkingOrderRevenueRes, error) {
+	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	if userID == "" {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to access revenue data.")
+	}
+
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account.")
+	}
+	if user.IsEmpty() {
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found.")
+	}
+	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can access this data.")
+	}
+
+	m := dao.ParkingOrders.Ctx(ctx).Where("deleted_at IS NULL").Where("payment_status", "PAID")
+
+	period := req.Period
+	if period == "" {
+		period = "1m"
+	}
+
+	var start *gtime.Time
+	var end *gtime.Time = gtime.Now()
+
+	if period == "custom" {
+		start = gtime.NewFromStr(req.StartTime)
+		if start == nil {
+			return nil, gerror.NewCode(consts.CodeValidationFailed, "Invalid start time format.")
+		}
+		end = gtime.NewFromStr(req.EndTime)
+		if end == nil {
+			return nil, gerror.NewCode(consts.CodeValidationFailed, "Invalid end time format.")
+		}
+		if start.After(end) {
+			return nil, gerror.NewCode(consts.CodeValidationFailed, "Start time must be before end time.")
+		}
+	} else {
+		start = s.getStartTime(period)
+	}
+
+	m = m.WhereBetween("created_at", start, end)
+
+	total, err := m.Sum("price")
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error calculating revenue.")
+	}
+
+	return &entity.ParkingOrderRevenueRes{TotalRevenue: gconv.Float64(total)}, nil
+}
+
+func (s *sParkingOrder) ParkingOrderTrends(ctx context.Context, req *entity.ParkingOrderTrendsReq) (*entity.ParkingOrderTrendsRes, error) {
+	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	if userID == "" {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to access trends data.")
+	}
+
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account.")
+	}
+	if user.IsEmpty() {
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found.")
+	}
+	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can access this data.")
+	}
+
+	period := req.Period
+	if period == "" {
+		period = "1m"
+	}
+
+	var start *gtime.Time
+	var end *gtime.Time = gtime.Now()
+
+	if period == "custom" {
+		start = gtime.NewFromStr(req.StartTime)
+		if start == nil {
+			return nil, gerror.NewCode(consts.CodeValidationFailed, "Invalid start time format.")
+		}
+		end = gtime.NewFromStr(req.EndTime)
+		if end == nil {
+			return nil, gerror.NewCode(consts.CodeValidationFailed, "Invalid end time format.")
+		}
+		if start.After(end) {
+			return nil, gerror.NewCode(consts.CodeValidationFailed, "Start time must be before end time.")
+		}
+	} else {
+		start = s.getStartTime(period)
+	}
+
+	groupField, dateFormat, step := s.getTrendsConfig(period, start, end)
+
+	m := dao.ParkingOrders.Ctx(ctx).
+		Fields(groupField+" as date, COUNT(*) as count").
+		Where("deleted_at IS NULL").
+		WhereBetween("created_at", start, end).
+		Group("date").Order("date ASC")
+
+	var dataList []struct {
+		Date  *gtime.Time `json:"date"`
+		Count int64       `json:"count"`
+	}
+	err = m.Scan(&dataList)
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving trends data.")
+	}
+
+	dataMap := make(map[string]int64)
+	for _, item := range dataList {
+		key := item.Date.Format(dateFormat)
+		dataMap[key] = item.Count
+	}
+
+	var orders []entity.ParkingOrderTrendsItem
+	total := int64(0)
+	current := start.Clone()
+	for !current.After(end) {
+		key := current.Format(dateFormat)
+		count := dataMap[key]
+		orders = append(orders, entity.ParkingOrderTrendsItem{Date: key, Count: count})
+		total += count
+		current = current.Add(step)
+	}
+
+	return &entity.ParkingOrderTrendsRes{Orders: orders, Total: total}, nil
+}
+
+func (s *sParkingOrder) ParkingOrderStatusBreakdown(ctx context.Context, req *entity.ParkingOrderStatusBreakdownReq) (*entity.ParkingOrderStatusBreakdownRes, error) {
+	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	if userID == "" {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to access status breakdown data.")
+	}
+
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account.")
+	}
+	if user.IsEmpty() {
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found.")
+	}
+	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can access this data.")
+	}
+
+	m := dao.ParkingOrders.Ctx(ctx).Fields("status, COUNT(*) as count").Where("deleted_at IS NULL")
+
+	period := req.Period
+	if period == "" {
+		period = "1m"
+	}
+
+	var start *gtime.Time
+	var end *gtime.Time = gtime.Now()
+
+	if period == "custom" {
+		start = gtime.NewFromStr(req.StartTime)
+		if start == nil {
+			return nil, gerror.NewCode(consts.CodeValidationFailed, "Invalid start time format.")
+		}
+		end = gtime.NewFromStr(req.EndTime)
+		if end == nil {
+			return nil, gerror.NewCode(consts.CodeValidationFailed, "Invalid end time format.")
+		}
+		if start.After(end) {
+			return nil, gerror.NewCode(consts.CodeValidationFailed, "Start time must be before end time.")
+		}
+	} else {
+		start = s.getStartTime(period)
+	}
+
+	m = m.WhereBetween("created_at", start, end)
+
+	var list []struct {
+		Status string `json:"status"`
+		Count  int64  `json:"count"`
+	}
+	err = m.Group("status").Scan(&list)
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving status breakdown.")
+	}
+
+	total := int64(0)
+	statuses := []entity.ParkingOrderStatusItem{
+		{Status: "pending", Count: 0},
+		{Status: "confirmed", Count: 0},
+		{Status: "canceled", Count: 0},
+		{Status: "completed", Count: 0},
+	}
+	for _, item := range list {
+		for i, status := range statuses {
+			if status.Status == item.Status {
+				statuses[i].Count = item.Count
+				total += item.Count
+			}
+		}
+	}
+
+	return &entity.ParkingOrderStatusBreakdownRes{Statuses: statuses, Total: total}, nil
+}
+
+func (s *sParkingOrder) getStartTime(period string) *gtime.Time {
+	now := gtime.Now()
+	switch period {
+	case "1h":
+		return now.Add(-time.Hour)
+	case "1d":
+		return now.Add(-24 * time.Hour)
+	case "1w":
+		return now.Add(-7 * 24 * time.Hour)
+	case "1m":
+		return now.AddDate(0, -1, 0)
+	default:
+		return now.AddDate(0, -1, 0)
+	}
+}
+
+func (s *sParkingOrder) getTrendsConfig(period string, start, end *gtime.Time) (groupField, dateFormat string, step time.Duration) {
+	if period != "custom" {
+		switch period {
+		case "1h":
+			return "DATE_TRUNC('minute', created_at)", "Y-m-d H:i", time.Minute
+		case "1d":
+			return "DATE_TRUNC('hour', created_at)", "Y-m-d H", time.Hour
+		case "1w", "1m":
+			return "DATE(created_at)", "Y-m-d", 24 * time.Hour
+		default:
+			return "DATE(created_at)", "Y-m-d", 24 * time.Hour
+		}
+	} else {
+		diff := end.Sub(start)
+		if diff <= time.Hour {
+			return "DATE_TRUNC('minute', created_at)", "Y-m-d H:i", time.Minute
+		} else if diff <= 24*time.Hour {
+			return "DATE_TRUNC('hour', created_at)", "Y-m-d H", time.Hour
+		} else {
+			return "DATE(created_at)", "Y-m-d", 24 * time.Hour
+		}
+	}
 }

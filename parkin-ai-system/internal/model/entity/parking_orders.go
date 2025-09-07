@@ -92,3 +92,47 @@ type ParkingOrderDeleteRes struct {
 type ParkingOrderPaymentReq struct {
 	Id int64 `json:"id"` // Parking order ID
 }
+
+// New dashboard entities
+
+type ParkingOrderRevenueReq struct {
+	Period    string `json:"period"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+}
+
+type ParkingOrderRevenueRes struct {
+	TotalRevenue float64 `json:"total_revenue"`
+}
+
+type ParkingOrderTrendsReq struct {
+	Period    string `json:"period"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+}
+
+type ParkingOrderTrendsRes struct {
+	Orders []ParkingOrderTrendsItem `json:"orders"`
+	Total  int64                    `json:"total"`
+}
+
+type ParkingOrderTrendsItem struct {
+	Date  string `json:"date"`
+	Count int64  `json:"count"`
+}
+
+type ParkingOrderStatusBreakdownReq struct {
+	Period    string `json:"period"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+}
+
+type ParkingOrderStatusBreakdownRes struct {
+	Statuses []ParkingOrderStatusItem `json:"statuses"`
+	Total    int64                    `json:"total"`
+}
+
+type ParkingOrderStatusItem struct {
+	Status string `json:"status"`
+	Count  int64  `json:"count"`
+}

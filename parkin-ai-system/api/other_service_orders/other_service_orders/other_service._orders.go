@@ -92,3 +92,50 @@ type OthersServiceOrderPaymentReq struct {
 type OthersServiceOrderPaymentRes struct {
 	Order OthersServiceOrderItem `json:"order"`
 }
+
+// New dashboard APIs
+
+type OthersServiceRevenueReq struct {
+	g.Meta    `path:"/others-service-orders/revenue" tags:"Service Order" method:"GET" summary:"Get total service revenue" description:"Retrieves total revenue from other services filtered by period." middleware:"middleware.Auth"`
+	Period    string `json:"period" v:"in:1h,1d,1w,1m,custom#Invalid period value"`                                                                // Period filter (1h, 1d, 1w, 1m, custom)
+	StartTime string `json:"start_time" v:"datetime|required-if:Period,custom#Invalid start time format|Start time is required for custom period"` // Start time (YYYY-MM-DD HH:MM:SS) for custom period
+	EndTime   string `json:"end_time" v:"datetime|required-if:Period,custom#Invalid end time format|End time is required for custom period"`       // End time (YYYY-MM-DD HH:MM:SS) for custom period
+}
+
+type OthersServiceRevenueRes struct {
+	TotalRevenue float64 `json:"total_revenue"`
+}
+
+type OthersServicePopularReq struct {
+	g.Meta    `path:"/others-service-orders/popular" tags:"Service Order" method:"GET" summary:"Get popular services" description:"Retrieves the most popular services by order count filtered by period." middleware:"middleware.Auth"`
+	Period    string `json:"period" v:"in:1h,1d,1w,1m,custom#Invalid period value"`                                                                // Period filter (1h, 1d, 1w, 1m, custom)
+	StartTime string `json:"start_time" v:"datetime|required-if:Period,custom#Invalid start time format|Start time is required for custom period"` // Start time (YYYY-MM-DD HH:MM:SS) for custom period
+	EndTime   string `json:"end_time" v:"datetime|required-if:Period,custom#Invalid end time format|End time is required for custom period"`       // End time (YYYY-MM-DD HH:MM:SS) for custom period
+}
+
+type OthersServicePopularRes struct {
+	Services []OthersServicePopularItem `json:"services"`
+}
+
+type OthersServicePopularItem struct {
+	ServiceId  int64  `json:"service_id"`
+	Name       string `json:"name"`
+	OrderCount int64  `json:"order_count"`
+}
+
+type OthersServiceTrendsReq struct {
+	g.Meta    `path:"/others-service-orders/trends" tags:"Service Order" method:"GET" summary:"Get service order trends" description:"Retrieves service order trends over time filtered by period, suitable for line charts." middleware:"middleware.Auth"`
+	Period    string `json:"period" v:"in:1h,1d,1w,1m,custom#Invalid period value"`                                                                // Period filter (1h, 1d, 1w, 1m, custom)
+	StartTime string `json:"start_time" v:"datetime|required-if:Period,custom#Invalid start time format|Start time is required for custom period"` // Start time (YYYY-MM-DD HH:MM:SS) for custom period
+	EndTime   string `json:"end_time" v:"datetime|required-if:Period,custom#Invalid end time format|End time is required for custom period"`       // End time (YYYY-MM-DD HH:MM:SS) for custom period
+}
+
+type OthersServiceTrendsRes struct {
+	Orders []OthersServiceTrendsItem `json:"orders"`
+	Total  int64                     `json:"total"`
+}
+
+type OthersServiceTrendsItem struct {
+	Date  string `json:"date"`
+	Count int64  `json:"count"`
+}

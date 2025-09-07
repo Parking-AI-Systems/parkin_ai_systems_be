@@ -49,6 +49,7 @@ var (
 	CodeInvalidOperation    = customCode{code: 1201, message: "Invalid operation", detail: nil, httpStatus: http.StatusBadRequest}
 	CodeTooManyRequests     = customCode{code: 1301, message: "Too many requests", detail: nil, httpStatus: http.StatusTooManyRequests}
 	CodeInternalError       = customCode{code: 1401, message: "Internal server error", detail: nil, httpStatus: http.StatusInternalServerError}
+	CodeValidationFailed    = customCode{code: 1501, message: "Validation failed", detail: nil, httpStatus: http.StatusBadRequest}
 )
 
 type customCode struct {

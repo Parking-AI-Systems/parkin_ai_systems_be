@@ -19,6 +19,9 @@ type (
 		ParkingOrderCancel(ctx context.Context, req *entity.ParkingOrderCancelReq) (*entity.ParkingOrderItem, error)
 		ParkingOrderDelete(ctx context.Context, req *entity.ParkingOrderDeleteReq) (*entity.ParkingOrderDeleteRes, error)
 		ParkingOrderPayment(ctx context.Context, req *entity.ParkingOrderPaymentReq) (*entity.ParkingOrderItem, error)
+		ParkingOrderRevenue(ctx context.Context, req *entity.ParkingOrderRevenueReq) (*entity.ParkingOrderRevenueRes, error)
+		ParkingOrderTrends(ctx context.Context, req *entity.ParkingOrderTrendsReq) (*entity.ParkingOrderTrendsRes, error)
+		ParkingOrderStatusBreakdown(ctx context.Context, req *entity.ParkingOrderStatusBreakdownReq) (*entity.ParkingOrderStatusBreakdownRes, error)
 	}
 )
 

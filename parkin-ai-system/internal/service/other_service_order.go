@@ -19,6 +19,9 @@ type (
 		OthersServiceOrderCancel(ctx context.Context, req *entity.OthersServiceOrderCancelReq) (*entity.OthersServiceOrderItem, error)
 		OthersServiceOrderDelete(ctx context.Context, req *entity.OthersServiceOrderDeleteReq) (*entity.OthersServiceOrderDeleteRes, error)
 		OthersServiceOrderPayment(ctx context.Context, req *entity.OthersServiceOrderPaymentReq) (*entity.OthersServiceOrderItem, error)
+		OthersServiceRevenue(ctx context.Context, req *entity.OthersServiceRevenueReq) (*entity.OthersServiceRevenueRes, error)
+		OthersServicePopular(ctx context.Context, req *entity.OthersServicePopularReq) (*entity.OthersServicePopularRes, error)
+		OthersServiceTrends(ctx context.Context, req *entity.OthersServiceTrendsReq) (*entity.OthersServiceTrendsRes, error)
 	}
 )
 

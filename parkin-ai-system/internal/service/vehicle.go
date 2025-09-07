@@ -17,7 +17,6 @@ type (
 		VehicleGet(ctx context.Context, req *entity.VehicleGetReq) (*entity.VehicleItem, error)
 		VehicleUpdate(ctx context.Context, req *entity.VehicleUpdateReq) (*entity.VehicleItem, error)
 		VehicleDelete(ctx context.Context, req *entity.VehicleDeleteReq) (*entity.VehicleDeleteRes, error)
-		// CheckVehicleSlotCompatibility checks if a vehicle type is compatible with a parking slot type
 		CheckVehicleSlotCompatibility(ctx context.Context, vehicleID int64, slotID int64) error
 	}
 )

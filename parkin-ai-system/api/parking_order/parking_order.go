@@ -18,4 +18,7 @@ type IParkingOrderParking_order interface {
 	ParkingOrderCancel(ctx context.Context, req *parking_order.ParkingOrderCancelReq) (res *parking_order.ParkingOrderCancelRes, err error)
 	ParkingOrderDelete(ctx context.Context, req *parking_order.ParkingOrderDeleteReq) (res *parking_order.ParkingOrderDeleteRes, err error)
 	ParkingOrderPayment(ctx context.Context, req *parking_order.ParkingOrderPaymentReq) (res *parking_order.ParkingOrderPaymentRes, err error)
+	ParkingOrderRevenue(ctx context.Context, req *parking_order.ParkingOrderRevenueReq) (res *parking_order.ParkingOrderRevenueRes, err error)
+	ParkingOrderTrends(ctx context.Context, req *parking_order.ParkingOrderTrendsReq) (res *parking_order.ParkingOrderTrendsRes, err error)
+	ParkingOrderStatusBreakdown(ctx context.Context, req *parking_order.ParkingOrderStatusBreakdownReq) (res *parking_order.ParkingOrderStatusBreakdownRes, err error)
 }
