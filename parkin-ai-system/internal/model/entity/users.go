@@ -186,3 +186,43 @@ type UserUpdateWalletBalanceReq struct {
 type UserUpdateWalletBalanceRes struct {
 	Message string `json:"message"`
 }
+
+type UserCountReq struct {
+	Period    string `json:"period"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+}
+
+type UserCountRes struct {
+	TotalUsers int64 `json:"total_users"`
+}
+
+type UserRoleDistributionReq struct {
+	Period    string `json:"period"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+}
+
+type UserRoleDistributionRes struct {
+	Roles []UserRoleItem `json:"roles"`
+}
+
+type UserRoleItem struct {
+	Role  string `json:"role"`
+	Count int64  `json:"count"`
+}
+
+type UserRecentRegistrationsReq struct {
+	Period    string `json:"period"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+}
+
+type UserRecentRegistrationsRes struct {
+	Registrations []UserRegistrationItem `json:"registrations"`
+}
+
+type UserRegistrationItem struct {
+	Date  string `json:"date"`
+	Count int64  `json:"count"`
+}

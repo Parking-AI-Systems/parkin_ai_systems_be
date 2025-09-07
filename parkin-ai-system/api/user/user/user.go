@@ -177,3 +177,46 @@ type UserUpdateWalletBalanceReq struct {
 type UserUpdateWalletBalanceRes struct {
 	Message string `json:"message"`
 }
+
+type UserCountReq struct {
+	g.Meta    `path:"/users/count" tags:"User" method:"GET" summary:"Get total user count" description:"Retrieves the total number of registered users, with optional period filter for new users." middleware:"middleware.Auth"`
+	Period    string `json:"period" v:"in:1h,1d,1w,1m,custom#Invalid period value"`                                                                // Period filter (1h, 1d, 1w, 1m, custom)
+	StartTime string `json:"start_time" v:"datetime|required-if:Period,custom#Invalid start time format|Start time is required for custom period"` // Start time (YYYY-MM-DD HH:MM:SS) for custom period
+	EndTime   string `json:"end_time" v:"datetime|required-if:Period,custom#Invalid end time format|End time is required for custom period"`       // End time (YYYY-MM-DD HH:MM:SS) for custom period
+}
+
+type UserCountRes struct {
+	TotalUsers int64 `json:"total_users"`
+}
+
+type UserRoleDistributionReq struct {
+	g.Meta    `path:"/users/role-distribution" tags:"User" method:"GET" summary:"Get user role distribution" description:"Retrieves the distribution of users by role, filtered by period." middleware:"middleware.Auth"`
+	Period    string `json:"period" v:"in:1h,1d,1w,1m,custom#Invalid period value"`                                                                // Period filter (1h, 1d, 1w, 1m, custom)
+	StartTime string `json:"start_time" v:"datetime|required-if:Period,custom#Invalid start time format|Start time is required for custom period"` // Start time (YYYY-MM-DD HH:MM:SS) for custom period
+	EndTime   string `json:"end_time" v:"datetime|required-if:Period,custom#Invalid end time format|End time is required for custom period"`       // End time (YYYY-MM-DD HH:MM:SS) for custom period
+}
+
+type UserRoleDistributionRes struct {
+	Roles []UserRoleItem `json:"roles"`
+}
+
+type UserRoleItem struct {
+	Role  string `json:"role"`
+	Count int64  `json:"count"`
+}
+
+type UserRecentRegistrationsReq struct {
+	g.Meta    `path:"/users/recent-registrations" tags:"User" method:"GET" summary:"Get recent user registrations" description:"Retrieves trends of new user registrations over time, filtered by period, suitable for line charts." middleware:"middleware.Auth"`
+	Period    string `json:"period" v:"in:1h,1d,1w,1m,custom#Invalid period value"`                                                                // Period filter (1h, 1d, 1w, 1m, custom)
+	StartTime string `json:"start_time" v:"datetime|required-if:Period,custom#Invalid start time format|Start time is required for custom period"` // Start time (YYYY-MM-DD HH:MM:SS) for custom period
+	EndTime   string `json:"end_time" v:"datetime|required-if:Period,custom#Invalid end time format|End time is required for custom period"`       // End time (YYYY-MM-DD HH:MM:SS) for custom period
+}
+
+type UserRecentRegistrationsRes struct {
+	Registrations []UserRegistrationItem `json:"registrations"`
+}
+
+type UserRegistrationItem struct {
+	Date  string `json:"date"`
+	Count int64  `json:"count"`
+}

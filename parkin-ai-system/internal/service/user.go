@@ -24,6 +24,9 @@ type (
 		UpdateUserRole(ctx context.Context, req *entity.UserUpdateRoleReq) (res *entity.UserUpdateRoleRes, err error)
 		UpdateWalletBalance(ctx context.Context, req *entity.UserUpdateWalletBalanceReq) (res *entity.UserUpdateWalletBalanceRes, err error)
 		HashPassword(password string) (string, error)
+		UserCount(ctx context.Context, req *entity.UserCountReq) (*entity.UserCountRes, error)
+		UserRoleDistribution(ctx context.Context, req *entity.UserRoleDistributionReq) (*entity.UserRoleDistributionRes, error)
+		UserRecentRegistrations(ctx context.Context, req *entity.UserRecentRegistrationsReq) (*entity.UserRecentRegistrationsRes, error)
 	}
 )
 

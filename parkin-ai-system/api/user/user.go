@@ -22,4 +22,7 @@ type IUserUser interface {
 	UserDelete(ctx context.Context, req *user.UserDeleteReq) (res *user.UserDeleteRes, err error)
 	UserUpdateRole(ctx context.Context, req *user.UserUpdateRoleReq) (res *user.UserUpdateRoleRes, err error)
 	UserUpdateWalletBalance(ctx context.Context, req *user.UserUpdateWalletBalanceReq) (res *user.UserUpdateWalletBalanceRes, err error)
+	UserCount(ctx context.Context, req *user.UserCountReq) (res *user.UserCountRes, err error)
+	UserRoleDistribution(ctx context.Context, req *user.UserRoleDistributionReq) (res *user.UserRoleDistributionRes, err error)
+	UserRecentRegistrations(ctx context.Context, req *user.UserRecentRegistrationsReq) (res *user.UserRecentRegistrationsRes, err error)
 }

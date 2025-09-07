@@ -804,3 +804,223 @@ func (s *sUser) HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	return string(bytes), err
 }
+
+func (s *sUser) UserCount(ctx context.Context, req *entity.UserCountReq) (*entity.UserCountRes, error) {
+	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	if userID == "" {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to access user count data.")
+	}
+
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account.")
+	}
+	if user.IsEmpty() {
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found.")
+	}
+	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can access this data.")
+	}
+
+	m := dao.Users.Ctx(ctx).Where("deleted_at IS NULL")
+
+	period := req.Period
+	if period == "" {
+		period = "all" // Default to all time if no period specified
+	}
+
+	var start *gtime.Time
+	var end *gtime.Time = gtime.Now()
+
+	if period == "custom" {
+		start = gtime.NewFromStr(req.StartTime)
+		if err != nil {
+			return nil, gerror.NewCode(consts.CodeValidationFailed, "Invalid start time format.")
+		}
+		end = gtime.NewFromStr(req.EndTime)
+		if start.After(end) {
+			return nil, gerror.NewCode(consts.CodeValidationFailed, "Start time must be before end time.")
+		}
+		m = m.WhereBetween("created_at", start, end)
+	} else if period != "all" {
+		start = s.getStartTime(period)
+		m = m.WhereBetween("created_at", start, end)
+	}
+
+	count, err := m.Count()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving user count.")
+	}
+
+	return &entity.UserCountRes{TotalUsers: int64(count)}, nil
+}
+
+func (s *sUser) UserRoleDistribution(ctx context.Context, req *entity.UserRoleDistributionReq) (*entity.UserRoleDistributionRes, error) {
+	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	if userID == "" {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to access role distribution data.")
+	}
+
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account.")
+	}
+	if user.IsEmpty() {
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found.")
+	}
+	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can access this data.")
+	}
+
+	m := dao.Users.Ctx(ctx).Fields("role, COUNT(*) as count").Where("deleted_at IS NULL")
+
+	period := req.Period
+	if period == "" {
+		period = "all" // Default to all time if no period specified
+	}
+
+	var start *gtime.Time
+	var end *gtime.Time = gtime.Now()
+
+	if period == "custom" {
+		start = gtime.NewFromStr(req.StartTime)
+		if start == nil {
+			return nil, gerror.NewCode(consts.CodeValidationFailed, "Invalid start time format.")
+		}
+		end = gtime.NewFromStr(req.EndTime)
+		if end == nil {
+			return nil, gerror.NewCode(consts.CodeValidationFailed, "Invalid end time format.")
+		}
+		if start.After(end) {
+			return nil, gerror.NewCode(consts.CodeValidationFailed, "Start time must be before end time.")
+		}
+		m = m.WhereBetween("created_at", start, end)
+	} else if period != "all" {
+		start = s.getStartTime(period)
+		m = m.WhereBetween("created_at", start, end)
+	}
+
+	var list []entity.UserRoleItem
+	err = m.Group("role").Scan(&list)
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving role distribution.")
+	}
+
+	return &entity.UserRoleDistributionRes{Roles: list}, nil
+}
+
+func (s *sUser) UserRecentRegistrations(ctx context.Context, req *entity.UserRecentRegistrationsReq) (*entity.UserRecentRegistrationsRes, error) {
+	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	if userID == "" {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to access recent registrations data.")
+	}
+
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account.")
+	}
+	if user.IsEmpty() {
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found.")
+	}
+	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can access this data.")
+	}
+
+	period := req.Period
+	if period == "" {
+		period = "1m"
+	}
+
+	var start *gtime.Time
+	var end *gtime.Time = gtime.Now()
+
+	if period == "custom" {
+		start = gtime.NewFromStr(req.StartTime)
+		if start == nil {
+			return nil, gerror.NewCode(consts.CodeValidationFailed, "Invalid start time format.")
+		}
+		end = gtime.NewFromStr(req.EndTime)
+		if end == nil {
+			return nil, gerror.NewCode(consts.CodeValidationFailed, "Invalid end time format.")
+		}
+		if start.After(end) {
+			return nil, gerror.NewCode(consts.CodeValidationFailed, "Start time must be before end time.")
+		}
+	} else {
+		start = s.getStartTime(period)
+	}
+
+	groupField, dateFormat, step := s.getTrendsConfig(period, start, end)
+
+	m := dao.Users.Ctx(ctx).
+		Fields(groupField+" as date, COUNT(*) as count").
+		Where("deleted_at IS NULL").
+		WhereBetween("created_at", start, end).
+		Group("date").Order("date ASC")
+
+	var dataList []struct {
+		Date  *gtime.Time `json:"date"`
+		Count int64       `json:"count"`
+	}
+	err = m.Scan(&dataList)
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving recent registrations data.")
+	}
+
+	dataMap := make(map[string]int64)
+	for _, item := range dataList {
+		key := item.Date.Format(dateFormat)
+		dataMap[key] = item.Count
+	}
+
+	var registrations []entity.UserRegistrationItem
+	current := start.Clone()
+	for !current.After(end) {
+		key := current.Format(dateFormat)
+		count := dataMap[key]
+		registrations = append(registrations, entity.UserRegistrationItem{Date: key, Count: count})
+		current = current.Add(step)
+	}
+
+	return &entity.UserRecentRegistrationsRes{Registrations: registrations}, nil
+}
+
+func (s *sUser) getStartTime(period string) *gtime.Time {
+	now := gtime.Now()
+	switch period {
+	case "1h":
+		return now.Add(-time.Hour)
+	case "1d":
+		return now.Add(-24 * time.Hour)
+	case "1w":
+		return now.Add(-7 * 24 * time.Hour)
+	case "1m":
+		return now.AddDate(0, -1, 0)
+	default:
+		return now.AddDate(0, -1, 0)
+	}
+}
+
+func (s *sUser) getTrendsConfig(period string, start, end *gtime.Time) (groupField, dateFormat string, step time.Duration) {
+	if period != "custom" {
+		switch period {
+		case "1h":
+			return "DATE_TRUNC('minute', created_at)", "Y-m-d H:i", time.Minute
+		case "1d":
+			return "DATE_TRUNC('hour', created_at)", "Y-m-d H", time.Hour
+		case "1w", "1m":
+			return "DATE(created_at)", "Y-m-d", 24 * time.Hour
+		default:
+			return "DATE(created_at)", "Y-m-d", 24 * time.Hour
+		}
+	} else {
+		diff := end.Sub(start)
+		if diff <= time.Hour {
+			return "DATE_TRUNC('minute', created_at)", "Y-m-d H:i", time.Minute
+		} else if diff <= 24*time.Hour {
+			return "DATE_TRUNC('hour', created_at)", "Y-m-d H", time.Hour
+		} else {
+			return "DATE(created_at)", "Y-m-d", 24 * time.Hour
+		}
+	}
+}

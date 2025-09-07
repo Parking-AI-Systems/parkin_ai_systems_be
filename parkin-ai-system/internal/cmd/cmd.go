@@ -224,6 +224,12 @@ var (
 					adminGroup.Bind(parkingOrderCtrl.ParkingOrderTrends)
 					adminGroup.Middleware(LogActionMiddleware("admin_parking_lot_orders_status_breakdown"))
 					adminGroup.Bind(parkingOrderCtrl.ParkingOrderStatusBreakdown)
+					adminGroup.Middleware(LogActionMiddleware("admin_user_count"))
+					adminGroup.Bind(userCtrl.UserCount)
+					adminGroup.Middleware(LogActionMiddleware("admin_user_role_distribution"))
+					adminGroup.Bind(userCtrl.UserRoleDistribution)
+					adminGroup.Middleware(LogActionMiddleware("admin_user_recent_registrations"))
+					adminGroup.Bind(userCtrl.UserRecentRegistrations)
 				})
 			})
 
