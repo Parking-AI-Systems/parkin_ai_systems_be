@@ -3,16 +3,17 @@ package parking_order
 import (
 	"context"
 	"fmt"
-	"parkin-ai-system/internal/consts"
-	"parkin-ai-system/internal/dao"
-	"parkin-ai-system/internal/model/do"
-	"parkin-ai-system/internal/model/entity"
-	"parkin-ai-system/internal/service"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
+
+	"parkin-ai-system/internal/consts"
+	"parkin-ai-system/internal/dao"
+	"parkin-ai-system/internal/model/do"
+	"parkin-ai-system/internal/model/entity"
+	"parkin-ai-system/internal/service"
 )
 
 type sParkingOrder struct{}
@@ -27,61 +28,61 @@ func init() {
 func (s *sParkingOrder) ParkingOrderAddWithUser(ctx context.Context, req *entity.ParkingOrderAddReq) (*entity.ParkingOrderAddRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to book a parking slot.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
-	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", req.VehicleId).One()
+	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", req.VehicleId).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking vehicle")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the vehicle. Please try again.")
 	}
 	if vehicle.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeVehicleNotFound, "Vehicle not found")
+		return nil, gerror.NewCode(consts.CodeVehicleNotFound, "The vehicle could not be found.")
 	}
 
-	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).One()
+	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the parking lot. Please try again.")
 	}
 	if lot.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeParkingLotNotFound, "Parking lot not found")
+		return nil, gerror.NewCode(consts.CodeParkingLotNotFound, "The parking lot could not be found.")
 	}
 
-	slot, err := dao.ParkingSlots.Ctx(ctx).Where("id", req.SlotId).One()
+	slot, err := dao.ParkingSlots.Ctx(ctx).Where("id", req.SlotId).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking slot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the parking slot. Please try again.")
 	}
 	if slot.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeParkingSlotNotFound, "Parking slot not found")
+		return nil, gerror.NewCode(consts.CodeParkingSlotNotFound, "The parking slot could not be found.")
 	}
 	isAvailable := gconv.Bool(slot.Map()["is_available"])
 	if !isAvailable {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Parking slot is not available")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "The selected parking slot is not available.")
 	}
 
 	if req.StartTime == "" || req.EndTime == "" {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Start time and end time are required")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Please provide both start and end times.")
 	}
 	startTime, err := gtime.StrToTime(req.StartTime)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Invalid start time format")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Please use a valid format for the start time.")
 	}
 	endTime, err := gtime.StrToTime(req.EndTime)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Invalid end time format")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Please use a valid format for the end time.")
 	}
 	if startTime.After(endTime) {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Start time must be before end time")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "The start time must be earlier than the end time.")
 	}
 	if startTime.Before(gtime.Now()) {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Start time must be in the future")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "The start time must be in the future.")
 	}
 
 	count, err := dao.ParkingOrders.Ctx(ctx).
@@ -89,17 +90,18 @@ func (s *sParkingOrder) ParkingOrderAddWithUser(ctx context.Context, req *entity
 		Where("status", "confirmed").
 		Where("start_time < ?", endTime).
 		Where("end_time > ?", startTime).
+		Where("deleted_at IS NULL").
 		Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking overlapping orders")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to check for booking conflicts. Please try again.")
 	}
 	if count > 0 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Slot is already booked for this time period")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "The slot is already booked for the selected time.")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while booking your slot. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -121,17 +123,17 @@ func (s *sParkingOrder) ParkingOrderAddWithUser(ctx context.Context, req *entity
 	}
 	lastId, err := dao.ParkingOrders.Ctx(ctx).TX(tx).Data(data).InsertAndGetId()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating parking order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while booking your slot. Please try again later.")
 	}
 
-	_, err = dao.ParkingSlots.Ctx(ctx).TX(tx).Data(g.Map{"is_available": false}).Where("id", req.SlotId).Update()
+	_, err = dao.ParkingSlots.Ctx(ctx).TX(tx).Data(g.Map{"is_available": false}).Where("id", req.SlotId).Where("deleted_at IS NULL").Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating parking slot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while booking your slot. Please try again later.")
 	}
 
-	_, err = tx.Exec("UPDATE parking_lots SET available_slots = available_slots - 1, updated_at = ? WHERE id = ?", gtime.Now(), req.LotId)
+	_, err = tx.Exec("UPDATE parking_lots SET available_slots = available_slots - 1, updated_at = ? WHERE id = ? AND deleted_at IS NULL", gtime.Now(), req.LotId)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating parking lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while booking your slot. Please try again later.")
 	}
 
 	notiData := do.Notifications{
@@ -144,46 +146,47 @@ func (s *sParkingOrder) ParkingOrderAddWithUser(ctx context.Context, req *entity
 	}
 	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while booking your slot. Please try again later.")
 	}
 
-	// Commit transaction
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while booking your slot. Please try again later.")
 	}
 
 	return &entity.ParkingOrderAddRes{Id: lastId}, nil
 }
+
 func (s *sParkingOrder) ParkingOrderList(ctx context.Context, req *entity.ParkingOrderListReq) (*entity.ParkingOrderListRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view your bookings.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
-	isAdmin := gconv.String(user.Map()["role"]) == "admin"
+	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 
-	// Build base query for joins and where conditions
 	baseQuery := dao.ParkingOrders.Ctx(ctx).
 		LeftJoin("parking_lots", "parking_lots.id = parking_orders.lot_id").
 		LeftJoin("parking_slots", "parking_slots.id = parking_orders.slot_id").
-		LeftJoin("vehicles", "vehicles.id = parking_orders.vehicle_id")
+		LeftJoin("vehicles", "vehicles.id = parking_orders.vehicle_id").
+		Where("parking_orders.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL OR parking_lots.id IS NULL").
+		Where("parking_slots.deleted_at IS NULL OR parking_slots.id IS NULL").
+		Where("vehicles.deleted_at IS NULL OR vehicles.id IS NULL")
 
-	// Apply filters
 	if req.UserId != 0 {
 		if !isAdmin && gconv.Int64(userID) != req.UserId {
-			return nil, gerror.NewCode(consts.CodeUnauthorized, "Cannot access orders of other users")
+			return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only view your own bookings or must be an admin.")
 		}
 		baseQuery = baseQuery.Where("parking_orders.user_id", req.UserId)
 	} else if !isAdmin {
-		// Non-admin users can only see their own orders
 		baseQuery = baseQuery.Where("parking_orders.user_id", userID)
 	}
 	if req.LotId != 0 {
@@ -193,27 +196,27 @@ func (s *sParkingOrder) ParkingOrderList(ctx context.Context, req *entity.Parkin
 		baseQuery = baseQuery.Where("parking_orders.status", req.Status)
 	}
 
-	// Get total count for pagination
 	total, err := baseQuery.Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error counting orders")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load your bookings. Please try again later.")
 	}
 
-	// Build data query with fields
 	m := dao.ParkingOrders.Ctx(ctx).
 		Fields("parking_orders.*, parking_lots.name as lot_name, parking_slots.code as slot_code, vehicles.license_plate as vehicle_plate").
 		LeftJoin("parking_lots", "parking_lots.id = parking_orders.lot_id").
 		LeftJoin("parking_slots", "parking_slots.id = parking_orders.slot_id").
-		LeftJoin("vehicles", "vehicles.id = parking_orders.vehicle_id")
+		LeftJoin("vehicles", "vehicles.id = parking_orders.vehicle_id").
+		Where("parking_orders.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL OR parking_lots.id IS NULL").
+		Where("parking_slots.deleted_at IS NULL OR parking_slots.id IS NULL").
+		Where("vehicles.deleted_at IS NULL OR vehicles.id IS NULL")
 
-	// Apply same filters to data query
 	if req.UserId != 0 {
 		if !isAdmin && gconv.Int64(userID) != req.UserId {
-			return nil, gerror.NewCode(consts.CodeUnauthorized, "Cannot access orders of other users")
+			return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only view your own bookings or must be an admin.")
 		}
 		m = m.Where("parking_orders.user_id", req.UserId)
 	} else if !isAdmin {
-		// Non-admin users can only see their own orders
 		m = m.Where("parking_orders.user_id", userID)
 	}
 	if req.LotId != 0 {
@@ -223,7 +226,6 @@ func (s *sParkingOrder) ParkingOrderList(ctx context.Context, req *entity.Parkin
 		m = m.Where("parking_orders.status", req.Status)
 	}
 
-	// Apply pagination
 	if req.Page <= 0 {
 		req.Page = 1
 	}
@@ -232,7 +234,6 @@ func (s *sParkingOrder) ParkingOrderList(ctx context.Context, req *entity.Parkin
 	}
 	m = m.Limit(req.PageSize).Offset((req.Page - 1) * req.PageSize)
 
-	// Execute query
 	var orders []struct {
 		entity.ParkingOrders
 		LotName      string `json:"lot_name"`
@@ -241,10 +242,9 @@ func (s *sParkingOrder) ParkingOrderList(ctx context.Context, req *entity.Parkin
 	}
 	err = m.Order("parking_orders.id DESC").Scan(&orders)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving orders")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load your bookings. Please try again later.")
 	}
 
-	// Convert to response format
 	list := make([]entity.ParkingOrderItem, 0, len(orders))
 	for _, order := range orders {
 		item := entity.ParkingOrderItem{
@@ -274,23 +274,22 @@ func (s *sParkingOrder) ParkingOrderList(ctx context.Context, req *entity.Parkin
 		Total: total,
 	}, nil
 }
+
 func (s *sParkingOrder) ParkingOrderGet(ctx context.Context, req *entity.ParkingOrderGetReq) (*entity.ParkingOrderItem, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view the booking.")
 	}
 
-	// Check if user exists and has admin role
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
-	isAdmin := gconv.String(user.Map()["role"]) == "admin"
+	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 
-	// Build query with joins
 	var order struct {
 		entity.ParkingOrders
 		LotName      string `json:"lot_name"`
@@ -302,19 +301,22 @@ func (s *sParkingOrder) ParkingOrderGet(ctx context.Context, req *entity.Parking
 		LeftJoin("parking_lots", "parking_lots.id = parking_orders.lot_id").
 		LeftJoin("parking_slots", "parking_slots.id = parking_orders.slot_id").
 		LeftJoin("vehicles", "vehicles.id = parking_orders.vehicle_id").
-		Where("parking_orders.id", req.Id)
+		Where("parking_orders.id", req.Id).
+		Where("parking_orders.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL OR parking_lots.id IS NULL").
+		Where("parking_slots.deleted_at IS NULL OR parking_slots.id IS NULL").
+		Where("vehicles.deleted_at IS NULL OR vehicles.id IS NULL")
 	if !isAdmin {
 		m = m.Where("parking_orders.user_id", userID)
 	}
 	err = m.Scan(&order)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load the booking. Please try again later.")
 	}
 	if order.Id == 0 {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Parking order not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The booking could not be found.")
 	}
 
-	// Convert to response format
 	item := entity.ParkingOrderItem{
 		Id:            order.Id,
 		UserId:        order.UserId,
@@ -337,40 +339,37 @@ func (s *sParkingOrder) ParkingOrderGet(ctx context.Context, req *entity.Parking
 
 	return &item, nil
 }
+
 func (s *sParkingOrder) ParkingOrderUpdate(ctx context.Context, req *entity.ParkingOrderUpdateReq) (*entity.ParkingOrderItem, error) {
-	// Get user_id from context
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to update the booking.")
 	}
 
-	// Check user and role
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
-	isAdmin := gconv.String(user.Map()["role"]) == "admin"
+	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 
-	// Check if order exists and user has access
-	order, err := dao.ParkingOrders.Ctx(ctx).Where("id", req.Id).One()
+	order, err := dao.ParkingOrders.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the booking. Please try again.")
 	}
 	if order.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Parking order not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The booking could not be found.")
 	}
 	if !isAdmin && gconv.Int64(order.Map()["user_id"]) != gconv.Int64(userID) {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "Cannot update orders of other users")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only update your own bookings or must be an admin.")
 	}
 
-	// Start transaction
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the booking. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -378,27 +377,26 @@ func (s *sParkingOrder) ParkingOrderUpdate(ctx context.Context, req *entity.Park
 		}
 	}()
 
-	// Prepare update data
 	updateData := g.Map{
 		"updated_at": gtime.Now(),
 	}
 	if req.StartTime != "" {
 		startTime, err := gtime.StrToTime(req.StartTime)
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeInvalidInput, "Invalid start time format")
+			return nil, gerror.NewCode(consts.CodeInvalidInput, "Please use a valid format for the start time.")
 		}
 		if startTime.Before(gtime.Now()) {
-			return nil, gerror.NewCode(consts.CodeInvalidInput, "Start time must be in the future")
+			return nil, gerror.NewCode(consts.CodeInvalidInput, "The start time must be in the future.")
 		}
 		updateData["start_time"] = startTime
 	}
 	if req.EndTime != "" {
 		endTime, err := gtime.StrToTime(req.EndTime)
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeInvalidInput, "Invalid end time format")
+			return nil, gerror.NewCode(consts.CodeInvalidInput, "Please use a valid format for the end time.")
 		}
 		if startTime, ok := updateData["start_time"].(*gtime.Time); ok && startTime.After(endTime) {
-			return nil, gerror.NewCode(consts.CodeInvalidInput, "Start time must be before end time")
+			return nil, gerror.NewCode(consts.CodeInvalidInput, "The start time must be earlier than the end time.")
 		}
 		updateData["end_time"] = endTime
 	}
@@ -406,22 +404,19 @@ func (s *sParkingOrder) ParkingOrderUpdate(ctx context.Context, req *entity.Park
 		updateData["status"] = req.Status
 	}
 
-	// Recalculate price if times change
 	if updateData["start_time"] != nil && updateData["end_time"] != nil {
-		lot, err := dao.ParkingLots.Ctx(ctx).Where("id", order.Map()["lot_id"]).One()
+		lot, err := dao.ParkingLots.Ctx(ctx).Where("id", order.Map()["lot_id"]).Where("deleted_at IS NULL").One()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking lot")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the parking lot. Please try again.")
 		}
 		updateData["price"] = gconv.Float64(lot.Map()["price_per_hour"]) * updateData["end_time"].(*gtime.Time).Sub(updateData["start_time"].(*gtime.Time)).Hours()
 	}
 
-	// Update order
-	_, err = dao.ParkingOrders.Ctx(ctx).TX(tx).Data(updateData).Where("id", req.Id).Update()
+	_, err = dao.ParkingOrders.Ctx(ctx).TX(tx).Data(updateData).Where("id", req.Id).Where("deleted_at IS NULL").Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the booking. Please try again later.")
 	}
 
-	// Create notification
 	if req.Status != "" {
 		notiData := do.Notifications{
 			UserId:         gconv.String(order.Map()["user_id"]),
@@ -433,17 +428,15 @@ func (s *sParkingOrder) ParkingOrderUpdate(ctx context.Context, req *entity.Park
 		}
 		_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the booking. Please try again later.")
 		}
 	}
 
-	// Commit transaction
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the booking. Please try again later.")
 	}
 
-	// Retrieve updated order
 	var updatedOrder struct {
 		entity.ParkingOrders
 		LotName      string `json:"lot_name"`
@@ -456,12 +449,15 @@ func (s *sParkingOrder) ParkingOrderUpdate(ctx context.Context, req *entity.Park
 		LeftJoin("parking_slots", "parking_slots.id = parking_orders.slot_id").
 		LeftJoin("vehicles", "vehicles.id = parking_orders.vehicle_id").
 		Where("parking_orders.id", req.Id).
+		Where("parking_orders.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL OR parking_lots.id IS NULL").
+		Where("parking_slots.deleted_at IS NULL OR parking_slots.id IS NULL").
+		Where("vehicles.deleted_at IS NULL OR vehicles.id IS NULL").
 		Scan(&updatedOrder)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving updated order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the booking. Please try again later.")
 	}
 
-	// Convert to response format
 	item := entity.ParkingOrderItem{
 		Id:            updatedOrder.Id,
 		UserId:        updatedOrder.UserId,
@@ -486,42 +482,38 @@ func (s *sParkingOrder) ParkingOrderUpdate(ctx context.Context, req *entity.Park
 }
 
 func (s *sParkingOrder) ParkingOrderCancel(ctx context.Context, req *entity.ParkingOrderCancelReq) (*entity.ParkingOrderItem, error) {
-	// Get user_id from context
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to cancel the booking.")
 	}
 
-	// Check user and role
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
-	isAdmin := gconv.String(user.Map()["role"]) == "admin"
+	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 
-	// Check if order exists and user has access
-	order, err := dao.ParkingOrders.Ctx(ctx).Where("id", req.Id).One()
+	order, err := dao.ParkingOrders.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the booking. Please try again.")
 	}
 	if order.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Parking order not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The booking could not be found.")
 	}
 	if !isAdmin && gconv.Int64(order.Map()["user_id"]) != gconv.Int64(userID) {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "Cannot cancel orders of other users")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only cancel your own bookings or must be an admin.")
 	}
 	if gconv.String(order.Map()["status"]) == "canceled" {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Order is already canceled")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "This booking has already been canceled.")
 	}
 
-	// Start transaction
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while canceling the booking. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -529,30 +521,26 @@ func (s *sParkingOrder) ParkingOrderCancel(ctx context.Context, req *entity.Park
 		}
 	}()
 
-	// Update order status
 	_, err = dao.ParkingOrders.Ctx(ctx).TX(tx).Data(g.Map{
 		"status":     "canceled",
 		"updated_at": gtime.Now(),
-	}).Where("id", req.Id).Update()
+	}).Where("id", req.Id).Where("deleted_at IS NULL").Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error canceling order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while canceling the booking. Please try again later.")
 	}
 
-	// Update slot availability
 	_, err = dao.ParkingSlots.Ctx(ctx).TX(tx).Data(g.Map{
 		"is_available": true,
-	}).Where("id", order.Map()["slot_id"]).Update()
+	}).Where("id", order.Map()["slot_id"]).Where("deleted_at IS NULL").Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating parking slot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while canceling the booking. Please try again later.")
 	}
 
-	// Update lot available slots
-	_, err = tx.Exec("UPDATE parking_lots SET available_slots = available_slots + 1, updated_at = ? WHERE id = ?", gtime.Now(), order.Map()["lot_id"])
+	_, err = tx.Exec("UPDATE parking_lots SET available_slots = available_slots + 1, updated_at = ? WHERE id = ? AND deleted_at IS NULL", gtime.Now(), order.Map()["lot_id"])
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating parking lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while canceling the booking. Please try again later.")
 	}
 
-	// Create notification
 	notiData := do.Notifications{
 		UserId:         userID,
 		Type:           "order_canceled",
@@ -563,16 +551,14 @@ func (s *sParkingOrder) ParkingOrderCancel(ctx context.Context, req *entity.Park
 	}
 	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while canceling the booking. Please try again later.")
 	}
 
-	// Commit transaction
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while canceling the booking. Please try again later.")
 	}
 
-	// Retrieve updated order
 	var updatedOrder struct {
 		entity.ParkingOrders
 		LotName      string `json:"lot_name"`
@@ -585,12 +571,15 @@ func (s *sParkingOrder) ParkingOrderCancel(ctx context.Context, req *entity.Park
 		LeftJoin("parking_slots", "parking_slots.id = parking_orders.slot_id").
 		LeftJoin("vehicles", "vehicles.id = parking_orders.vehicle_id").
 		Where("parking_orders.id", req.Id).
+		Where("parking_orders.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL OR parking_lots.id IS NULL").
+		Where("parking_slots.deleted_at IS NULL OR parking_slots.id IS NULL").
+		Where("vehicles.deleted_at IS NULL OR vehicles.id IS NULL").
 		Scan(&updatedOrder)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving updated order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while canceling the booking. Please try again later.")
 	}
 
-	// Convert to response format
 	item := entity.ParkingOrderItem{
 		Id:            updatedOrder.Id,
 		UserId:        updatedOrder.UserId,
@@ -615,38 +604,34 @@ func (s *sParkingOrder) ParkingOrderCancel(ctx context.Context, req *entity.Park
 }
 
 func (s *sParkingOrder) ParkingOrderDelete(ctx context.Context, req *entity.ParkingOrderDeleteReq) (*entity.ParkingOrderDeleteRes, error) {
-	// Get user_id from context
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to delete the booking.")
 	}
 
-	// Check user and role
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
-	isAdmin := gconv.String(user.Map()["role"]) == "admin"
+	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 
-	// Check if order exists and user has access
 	order, err := dao.ParkingOrders.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the booking. Please try again.")
 	}
 	if order.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Parking order not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The booking could not be found.")
 	}
 	if !isAdmin && gconv.Int64(order.Map()["user_id"]) != gconv.Int64(userID) {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "Cannot delete orders of other users")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only delete your own bookings or must be an admin.")
 	}
 
-	// Start transaction
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the booking. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -654,29 +639,26 @@ func (s *sParkingOrder) ParkingOrderDelete(ctx context.Context, req *entity.Park
 		}
 	}()
 
-	// Soft delete order
 	_, err = dao.ParkingOrders.Ctx(ctx).TX(tx).Data(g.Map{
 		"deleted_at": gtime.Now(),
-	}).Where("id", req.Id).Update()
+		"updated_at": gtime.Now(),
+	}).Where("id", req.Id).Where("deleted_at IS NULL").Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the booking. Please try again later.")
 	}
 
-	// Update slot availability
 	_, err = dao.ParkingSlots.Ctx(ctx).TX(tx).Data(g.Map{
 		"is_available": true,
-	}).Where("id", order.Map()["slot_id"]).Update()
+	}).Where("id", order.Map()["slot_id"]).Where("deleted_at IS NULL").Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating parking slot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the booking. Please try again later.")
 	}
 
-	// Update lot available slots
-	_, err = tx.Exec("UPDATE parking_lots SET available_slots = available_slots + 1, updated_at = ? WHERE id = ?", gtime.Now(), order.Map()["lot_id"])
+	_, err = tx.Exec("UPDATE parking_lots SET available_slots = available_slots + 1, updated_at = ? WHERE id = ? AND deleted_at IS NULL", gtime.Now(), order.Map()["lot_id"])
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating parking lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the booking. Please try again later.")
 	}
 
-	// Create notification
 	notiData := do.Notifications{
 		UserId:         userID,
 		Type:           "order_deleted",
@@ -687,58 +669,52 @@ func (s *sParkingOrder) ParkingOrderDelete(ctx context.Context, req *entity.Park
 	}
 	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the booking. Please try again later.")
 	}
 
-	// Commit transaction
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the booking. Please try again later.")
 	}
 
 	return &entity.ParkingOrderDeleteRes{Message: "Parking order deleted successfully"}, nil
 }
 
 func (s *sParkingOrder) ParkingOrderPayment(ctx context.Context, req *entity.ParkingOrderPaymentReq) (*entity.ParkingOrderItem, error) {
-	// Get user_id from context
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to process the payment.")
 	}
 
-	// Check user
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
-	// Check if order exists and user has access
 	order, err := dao.ParkingOrders.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the booking. Please try again.")
 	}
 	if order.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Parking order not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The booking could not be found.")
 	}
 	if gconv.Int64(order.Map()["user_id"]) != gconv.Int64(userID) {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "Cannot process payment for orders of other users")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only process payments for your own bookings.")
 	}
 	if gconv.String(order.Map()["payment_status"]) == "paid" {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Order is already paid")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "This booking has already been paid.")
 	}
 
-	// Check wallet balance
 	if gconv.Float64(user.Map()["wallet_balance"]) < gconv.Float64(order.Map()["price"]) {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Insufficient wallet balance")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Your wallet balance is not sufficient for this payment.")
 	}
 
-	// Start transaction
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while processing the payment. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -746,22 +722,19 @@ func (s *sParkingOrder) ParkingOrderPayment(ctx context.Context, req *entity.Par
 		}
 	}()
 
-	// Update payment status
 	_, err = dao.ParkingOrders.Ctx(ctx).TX(tx).Data(g.Map{
 		"payment_status": "paid",
 		"updated_at":     gtime.Now(),
-	}).Where("id", req.Id).Update()
+	}).Where("id", req.Id).Where("deleted_at IS NULL").Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating payment status")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while processing the payment. Please try again later.")
 	}
 
-	// Deduct wallet balance
-	_, err = tx.Exec("UPDATE users SET wallet_balance = wallet_balance - ?, updated_at = ? WHERE id = ?", order.Map()["price"], gtime.Now(), userID)
+	_, err = tx.Exec("UPDATE users SET wallet_balance = wallet_balance - ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL", order.Map()["price"], gtime.Now(), userID)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating wallet balance")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while processing the payment. Please try again later.")
 	}
 
-	// Create wallet transaction
 	txData := do.WalletTransactions{
 		UserId:         userID,
 		Amount:         -gconv.Float64(order.Map()["price"]),
@@ -772,10 +745,9 @@ func (s *sParkingOrder) ParkingOrderPayment(ctx context.Context, req *entity.Par
 	}
 	_, err = dao.WalletTransactions.Ctx(ctx).TX(tx).Data(txData).Insert()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating wallet transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while processing the payment. Please try again later.")
 	}
 
-	// Create notification
 	notiData := do.Notifications{
 		UserId:         userID,
 		Type:           "payment_confirmed",
@@ -786,16 +758,14 @@ func (s *sParkingOrder) ParkingOrderPayment(ctx context.Context, req *entity.Par
 	}
 	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while processing the payment. Please try again later.")
 	}
 
-	// Commit transaction
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while processing the payment. Please try again later.")
 	}
 
-	// Retrieve updated order
 	var updatedOrder struct {
 		entity.ParkingOrders
 		LotName      string `json:"lot_name"`
@@ -808,12 +778,15 @@ func (s *sParkingOrder) ParkingOrderPayment(ctx context.Context, req *entity.Par
 		LeftJoin("parking_slots", "parking_slots.id = parking_orders.slot_id").
 		LeftJoin("vehicles", "vehicles.id = parking_orders.vehicle_id").
 		Where("parking_orders.id", req.Id).
+		Where("parking_orders.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL OR parking_lots.id IS NULL").
+		Where("parking_slots.deleted_at IS NULL OR parking_slots.id IS NULL").
+		Where("vehicles.deleted_at IS NULL OR vehicles.id IS NULL").
 		Scan(&updatedOrder)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving updated order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while processing the payment. Please try again later.")
 	}
 
-	// Convert to response format
 	item := entity.ParkingOrderItem{
 		Id:            updatedOrder.Id,
 		UserId:        updatedOrder.UserId,
