@@ -27,12 +27,12 @@ func init() {
 func (s *sOthersServiceOrder) OthersServiceOrderAddWithUser(ctx context.Context, req *entity.OthersServiceOrderAddReq) (*entity.OthersServiceOrderAddRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to create a service order")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at is NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking user details")
 	}
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
@@ -40,7 +40,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderAddWithUser(ctx context.Context,
 
 	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", req.VehicleId).Where("deleted_at is NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking vehicle")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking vehicle details")
 	}
 	if vehicle.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeVehicleNotFound, "Vehicle not found")
@@ -48,7 +48,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderAddWithUser(ctx context.Context,
 
 	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).Where("deleted_at is NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking parking lot details")
 	}
 	if lot.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeParkingLotNotFound, "Parking lot not found")
@@ -56,18 +56,18 @@ func (s *sOthersServiceOrder) OthersServiceOrderAddWithUser(ctx context.Context,
 
 	service, err := dao.OthersService.Ctx(ctx).Where("id", req.ServiceId).Where("deleted_at is NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking service")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking service details")
 	}
 	if service.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeServiceNotFound, "Service not found")
 	}
 	isActive := gconv.Bool(service.Map()["is_active"])
 	if !isActive {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Service is not active")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "This service is not currently available")
 	}
 
 	if req.ScheduledTime == "" {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Scheduled time is required")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Please provide a scheduled time")
 	}
 	scheduledTime, err := gtime.StrToTime(req.ScheduledTime)
 	if err != nil {
@@ -79,7 +79,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderAddWithUser(ctx context.Context,
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while starting the transaction")
 	}
 	defer func() {
 		if err != nil {
@@ -100,7 +100,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderAddWithUser(ctx context.Context,
 	}
 	lastId, err := dao.OthersServiceOrders.Ctx(ctx).TX(tx).Data(data).InsertAndGetId()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating service order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while creating the service order")
 	}
 
 	notiData := do.Notifications{
@@ -113,12 +113,12 @@ func (s *sOthersServiceOrder) OthersServiceOrderAddWithUser(ctx context.Context,
 	}
 	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while creating the notification")
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while saving the changes")
 	}
 
 	return &entity.OthersServiceOrderAddRes{Id: lastId}, nil
@@ -127,12 +127,12 @@ func (s *sOthersServiceOrder) OthersServiceOrderAddWithUser(ctx context.Context,
 func (s *sOthersServiceOrder) OthersServiceOrderList(ctx context.Context, req *entity.OthersServiceOrderListReq) (*entity.OthersServiceOrderListRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view service orders")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at is NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking user details")
 	}
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
@@ -147,7 +147,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderList(ctx context.Context, req *e
 
 	if req.UserId != 0 {
 		if !isAdmin && gconv.Int64(userID) != req.UserId {
-			return nil, gerror.NewCode(consts.CodeUnauthorized, "Cannot access orders of other users")
+			return nil, gerror.NewCode(consts.CodeUnauthorized, "You cannot view orders of other users")
 		}
 		m = m.Where("others_service_orders.user_id", req.UserId)
 	} else if !isAdmin {
@@ -162,7 +162,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderList(ctx context.Context, req *e
 
 	total, err := m.Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error counting orders")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while counting orders")
 	}
 
 	if req.Page <= 0 {
@@ -181,7 +181,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderList(ctx context.Context, req *e
 	}
 	err = m.Order("others_service_orders.id DESC").Scan(&orders)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving orders")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while retrieving orders")
 	}
 
 	list := make([]entity.OthersServiceOrderItem, 0, len(orders))
@@ -200,6 +200,8 @@ func (s *sOthersServiceOrder) OthersServiceOrderList(ctx context.Context, req *e
 			Price:         order.Price,
 			PaymentStatus: order.PaymentStatus,
 			CreatedAt:     order.CreatedAt.Format("2006-01-02 15:04:05"),
+			UpdatedAt:     order.UpdatedAt.Format("2006-01-02 15:04:05"),
+			DeletedAt:     order.DeletedAt.Format("2006-01-02 15:04:05"),
 		}
 		list = append(list, item)
 	}
@@ -213,12 +215,12 @@ func (s *sOthersServiceOrder) OthersServiceOrderList(ctx context.Context, req *e
 func (s *sOthersServiceOrder) OthersServiceOrderGet(ctx context.Context, req *entity.OthersServiceOrderGetReq) (*entity.OthersServiceOrderItem, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view order details")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking user details")
 	}
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
@@ -242,7 +244,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderGet(ctx context.Context, req *en
 	}
 	err = m.Scan(&order)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while retrieving order details")
 	}
 	if order.Id == 0 {
 		return nil, gerror.NewCode(consts.CodeNotFound, "Service order not found")
@@ -262,6 +264,8 @@ func (s *sOthersServiceOrder) OthersServiceOrderGet(ctx context.Context, req *en
 		Price:         order.Price,
 		PaymentStatus: order.PaymentStatus,
 		CreatedAt:     order.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt:     order.UpdatedAt.Format("2006-01-02 15:04:05"),
+		DeletedAt:     order.DeletedAt.Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil
@@ -270,12 +274,12 @@ func (s *sOthersServiceOrder) OthersServiceOrderGet(ctx context.Context, req *en
 func (s *sOthersServiceOrder) OthersServiceOrderUpdate(ctx context.Context, req *entity.OthersServiceOrderUpdateReq) (*entity.OthersServiceOrderItem, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to update the order")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking user details")
 	}
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
@@ -283,20 +287,20 @@ func (s *sOthersServiceOrder) OthersServiceOrderUpdate(ctx context.Context, req 
 
 	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 
-	order, err := dao.OthersServiceOrders.Ctx(ctx).Where("id", req.Id).One()
+	order, err := dao.OthersServiceOrders.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking order details")
 	}
 	if order.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeNotFound, "Service order not found")
 	}
 	if !isAdmin && gconv.Int64(order.Map()["user_id"]) != gconv.Int64(userID) {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "Cannot update orders of other users")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "You cannot update orders of other users")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while starting the transaction")
 	}
 	defer func() {
 		if err != nil {
@@ -321,9 +325,9 @@ func (s *sOthersServiceOrder) OthersServiceOrderUpdate(ctx context.Context, req 
 		updateData["status"] = req.Status
 	}
 
-	_, err = dao.OthersServiceOrders.Ctx(ctx).TX(tx).Data(updateData).Where("id", req.Id).Update()
+	_, err = dao.OthersServiceOrders.Ctx(ctx).TX(tx).Data(updateData).Where("id", req.Id).Where("deleted_at IS NULL").Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the order")
 	}
 
 	if req.Status != "" {
@@ -337,13 +341,13 @@ func (s *sOthersServiceOrder) OthersServiceOrderUpdate(ctx context.Context, req 
 		}
 		_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while creating the notification")
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while saving the changes")
 	}
 
 	var updatedOrder struct {
@@ -360,7 +364,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderUpdate(ctx context.Context, req 
 		Where("others_service_orders.id", req.Id).
 		Scan(&updatedOrder)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving updated order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while retrieving the updated order")
 	}
 
 	item := entity.OthersServiceOrderItem{
@@ -387,12 +391,12 @@ func (s *sOthersServiceOrder) OthersServiceOrderUpdate(ctx context.Context, req 
 func (s *sOthersServiceOrder) OthersServiceOrderCancel(ctx context.Context, req *entity.OthersServiceOrderCancelReq) (*entity.OthersServiceOrderItem, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to cancel the order")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking user details")
 	}
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
@@ -400,23 +404,23 @@ func (s *sOthersServiceOrder) OthersServiceOrderCancel(ctx context.Context, req 
 
 	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 
-	order, err := dao.OthersServiceOrders.Ctx(ctx).Where("id", req.Id).One()
+	order, err := dao.OthersServiceOrders.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking order details")
 	}
 	if order.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeNotFound, "Service order not found")
 	}
 	if !isAdmin && gconv.Int64(order.Map()["user_id"]) != gconv.Int64(userID) {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "Cannot cancel orders of other users")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "You cannot cancel orders of other users")
 	}
 	if gconv.String(order.Map()["status"]) == "canceled" {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Order is already canceled")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "This order has already been canceled")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while starting the transaction")
 	}
 	defer func() {
 		if err != nil {
@@ -429,7 +433,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderCancel(ctx context.Context, req 
 		"updated_at": gtime.Now(),
 	}).Where("id", req.Id).Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error canceling order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while canceling the order")
 	}
 
 	notiData := do.Notifications{
@@ -442,12 +446,12 @@ func (s *sOthersServiceOrder) OthersServiceOrderCancel(ctx context.Context, req 
 	}
 	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while creating the notification")
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while saving the changes")
 	}
 
 	var updatedOrder struct {
@@ -464,7 +468,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderCancel(ctx context.Context, req 
 		Where("others_service_orders.id", req.Id).
 		Scan(&updatedOrder)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving updated order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while retrieving the updated order")
 	}
 
 	item := entity.OthersServiceOrderItem{
@@ -481,6 +485,8 @@ func (s *sOthersServiceOrder) OthersServiceOrderCancel(ctx context.Context, req 
 		Price:         updatedOrder.Price,
 		PaymentStatus: updatedOrder.PaymentStatus,
 		CreatedAt:     updatedOrder.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt:     updatedOrder.UpdatedAt.Format("2006-01-02 15:04:05"),
+		DeletedAt:     updatedOrder.DeletedAt.Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil
@@ -489,32 +495,32 @@ func (s *sOthersServiceOrder) OthersServiceOrderCancel(ctx context.Context, req 
 func (s *sOthersServiceOrder) OthersServiceOrderDelete(ctx context.Context, req *entity.OthersServiceOrderDeleteReq) (*entity.OthersServiceOrderDeleteRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to delete the order")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking user details")
 	}
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
-	isAdmin := gconv.String(user.Map()["role"]) == "admin"
+	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 
 	order, err := dao.OthersServiceOrders.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking order details")
 	}
 	if order.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeNotFound, "Service order not found")
 	}
 	if !isAdmin && gconv.Int64(order.Map()["user_id"]) != gconv.Int64(userID) {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "Cannot delete orders of other users")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "You cannot delete orders of other users")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while starting the transaction")
 	}
 	defer func() {
 		if err != nil {
@@ -526,7 +532,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderDelete(ctx context.Context, req 
 		"deleted_at": gtime.Now(),
 	}).Where("id", req.Id).Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the order")
 	}
 
 	notiData := do.Notifications{
@@ -539,12 +545,12 @@ func (s *sOthersServiceOrder) OthersServiceOrderDelete(ctx context.Context, req 
 	}
 	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while creating the notification")
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while saving the changes")
 	}
 
 	return &entity.OthersServiceOrderDeleteRes{Message: "Service order deleted successfully"}, nil
@@ -553,38 +559,38 @@ func (s *sOthersServiceOrder) OthersServiceOrderDelete(ctx context.Context, req 
 func (s *sOthersServiceOrder) OthersServiceOrderPayment(ctx context.Context, req *entity.OthersServiceOrderPaymentReq) (*entity.OthersServiceOrderItem, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to process the payment")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking user details")
 	}
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
 
-	order, err := dao.OthersServiceOrders.Ctx(ctx).Where("id", req.Id).One()
+	order, err := dao.OthersServiceOrders.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking order details")
 	}
 	if order.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeNotFound, "Service order not found")
 	}
 	if gconv.Int64(order.Map()["user_id"]) != gconv.Int64(userID) {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "Cannot process payment for orders of other users")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "You cannot process payments for orders of other users")
 	}
 	if gconv.String(order.Map()["payment_status"]) == "paid" {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Order is already paid")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "This order has already been paid")
 	}
 
 	if gconv.Float64(user.Map()["wallet_balance"]) < gconv.Float64(order.Map()["price"]) {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Insufficient wallet balance")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Your wallet balance is insufficient for this payment")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while starting the transaction")
 	}
 	defer func() {
 		if err != nil {
@@ -595,16 +601,16 @@ func (s *sOthersServiceOrder) OthersServiceOrderPayment(ctx context.Context, req
 	_, err = dao.OthersServiceOrders.Ctx(ctx).TX(tx).Data(g.Map{
 		"payment_status": "paid",
 		"updated_at":     gtime.Now(),
-	}).Where("id", req.Id).Update()
+	}).Where("id", req.Id).Where("deleted_at IS NULL").Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating payment status")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the payment status")
 	}
 
 	_, err = dao.Users.Ctx(ctx).TX(tx).Data(g.Map{
 		"wallet_balance": g.DB().Raw("wallet_balance - ?", order.Map()["price"]),
 	}).Where("id", userID).Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating wallet balance")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating your wallet balance")
 	}
 
 	txData := do.WalletTransactions{
@@ -617,7 +623,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderPayment(ctx context.Context, req
 	}
 	_, err = dao.WalletTransactions.Ctx(ctx).TX(tx).Data(txData).Insert()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating wallet transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while recording the transaction")
 	}
 
 	notiData := do.Notifications{
@@ -630,12 +636,12 @@ func (s *sOthersServiceOrder) OthersServiceOrderPayment(ctx context.Context, req
 	}
 	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while creating the notification")
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while saving the changes")
 	}
 
 	var updatedOrder struct {
@@ -652,7 +658,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderPayment(ctx context.Context, req
 		Where("others_service_orders.id", req.Id).
 		Scan(&updatedOrder)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving updated order")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while retrieving the updated order")
 	}
 
 	item := entity.OthersServiceOrderItem{
@@ -669,6 +675,8 @@ func (s *sOthersServiceOrder) OthersServiceOrderPayment(ctx context.Context, req
 		Price:         updatedOrder.Price,
 		PaymentStatus: updatedOrder.PaymentStatus,
 		CreatedAt:     updatedOrder.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt:     updatedOrder.UpdatedAt.Format("2006-01-02 15:04:05"),
+		DeletedAt:     updatedOrder.DeletedAt.Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil
