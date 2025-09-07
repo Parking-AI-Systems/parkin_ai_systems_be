@@ -244,7 +244,7 @@ func (s *sNotification) NotificationDelete(ctx context.Context, req *entity.Noti
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
-	if gconv.String(user.Map()["role"]) != "admin" {
+	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can delete notifications")
 	}
 
