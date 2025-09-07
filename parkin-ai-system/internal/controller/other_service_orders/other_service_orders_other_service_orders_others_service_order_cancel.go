@@ -37,6 +37,8 @@ func entityToApiServiceOrderItem(item *entity.OthersServiceOrderItem) other_serv
 		Id:            item.Id,
 		VehicleId:     item.VehicleId,
 		LotId:         item.LotId,
+		LotName:       item.LotName,
+		ServiceName:   item.ServiceName,
 		ServiceId:     item.ServiceId,
 		ScheduledTime: item.ScheduledTime,
 		VehiclePlate:  item.VehiclePlate,

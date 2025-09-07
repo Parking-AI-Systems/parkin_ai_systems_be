@@ -140,6 +140,37 @@ func (s *sOthersServiceOrder) OthersServiceOrderList(ctx context.Context, req *e
 	}
 	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 
+	// Build base query for count
+	baseQuery := dao.OthersServiceOrders.Ctx(ctx).
+		LeftJoin("parking_lots", "parking_lots.id = others_service_orders.lot_id").
+		LeftJoin("others_service", "others_service.id = others_service_orders.service_id").
+		LeftJoin("vehicles", "vehicles.id = others_service_orders.vehicle_id").
+		Where("others_service_orders.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL").
+		Where("others_service.deleted_at IS NULL").
+		Where("vehicles.deleted_at IS NULL")
+
+	if req.UserId != 0 {
+		if !isAdmin && gconv.Int64(userID) != req.UserId {
+			return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins or the order owner can view this order.")
+		}
+		baseQuery = baseQuery.Where("others_service_orders.user_id", req.UserId)
+	} else if !isAdmin {
+		baseQuery = baseQuery.Where("others_service_orders.user_id", userID)
+	}
+	if req.LotId != 0 {
+		baseQuery = baseQuery.Where("others_service_orders.lot_id", req.LotId)
+	}
+	if req.Status != "" {
+		baseQuery = baseQuery.Where("others_service_orders.status", req.Status)
+	}
+
+	total, err := baseQuery.Count()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while counting orders.")
+	}
+
+	// Build data query with fields
 	m := dao.OthersServiceOrders.Ctx(ctx).
 		Fields("others_service_orders.*, parking_lots.name as lot_name, others_service.name as service_name, vehicles.license_plate as vehicle_plate").
 		LeftJoin("parking_lots", "parking_lots.id = others_service_orders.lot_id").
@@ -163,11 +194,6 @@ func (s *sOthersServiceOrder) OthersServiceOrderList(ctx context.Context, req *e
 	}
 	if req.Status != "" {
 		m = m.Where("others_service_orders.status", req.Status)
-	}
-
-	total, err := m.Count()
-	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while counting orders.")
 	}
 
 	if req.Page <= 0 {
