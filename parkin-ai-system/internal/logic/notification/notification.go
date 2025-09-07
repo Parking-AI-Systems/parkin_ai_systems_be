@@ -38,8 +38,26 @@ func (s *sNotification) NotificationList(ctx context.Context, req *entity.Notifi
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
 
+	// Base query builder for joins and where conditions
+	baseQuery := dao.Notifications.Ctx(ctx).
+		LeftJoin("parking_lots", "parking_lots.id = notifications.related_order_id AND notifications.type LIKE 'parking_lot%'").
+		LeftJoin("parking_orders", "parking_orders.id = notifications.related_order_id AND notifications.type LIKE 'parking_order%'").
+		LeftJoin("others_service", "others_service.id = notifications.related_order_id AND notifications.type LIKE 'others_service%'").
+		Where("notifications.user_id", userID)
+
+	if req.IsRead != nil {
+		baseQuery = baseQuery.Where("notifications.is_read", *req.IsRead)
+	}
+
+	// Count query - no fields needed for count
+	total, err := baseQuery.Count()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error counting notifications")
+	}
+
+	// Data query with fields
 	m := dao.Notifications.Ctx(ctx).
-		Fields("notifications.*, parking_lots.name as lot_name, parking_orders.order_number as order_number, others_service.name as service_name").
+		Fields("notifications.*, parking_lots.name as lot_name, parking_orders.id as order_number, others_service.name as service_name").
 		LeftJoin("parking_lots", "parking_lots.id = notifications.related_order_id AND notifications.type LIKE 'parking_lot%'").
 		LeftJoin("parking_orders", "parking_orders.id = notifications.related_order_id AND notifications.type LIKE 'parking_order%'").
 		LeftJoin("others_service", "others_service.id = notifications.related_order_id AND notifications.type LIKE 'others_service%'").
@@ -47,11 +65,6 @@ func (s *sNotification) NotificationList(ctx context.Context, req *entity.Notifi
 
 	if req.IsRead != nil {
 		m = m.Where("notifications.is_read", *req.IsRead)
-	}
-
-	total, err := m.Count()
-	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error counting notifications")
 	}
 
 	if req.Page <= 0 {
@@ -133,7 +146,7 @@ func (s *sNotification) NotificationGet(ctx context.Context, req *entity.Notific
 		ServiceName string `json:"service_name"`
 	}
 	err = dao.Notifications.Ctx(ctx).
-		Fields("notifications.*, parking_lots.name as lot_name, parking_orders.order_number as order_number, others_service.name as service_name").
+		Fields("notifications.*, parking_lots.name as lot_name, parking_orders.id as order_number, others_service.name as service_name").
 		LeftJoin("parking_lots", "parking_lots.id = notifications.related_order_id AND notifications.type LIKE 'parking_lot%'").
 		LeftJoin("parking_orders", "parking_orders.id = notifications.related_order_id AND notifications.type LIKE 'parking_order%'").
 		LeftJoin("others_service", "others_service.id = notifications.related_order_id AND notifications.type LIKE 'others_service%'").

@@ -494,13 +494,24 @@ func (s *sParkingLot) ParkingLotDelete(ctx context.Context, req *entity.ParkingL
 			tx.Rollback()
 		}
 	}()
-
+	_, err = dao.ParkingSlots.Ctx(ctx).TX(tx).Where("lot_id", req.Id).Delete()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting parking slots")
+	}
+	_, err = dao.ParkingLotReviews.Ctx(ctx).TX(tx).Where("lot_id", req.Id).Delete()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting parking lot reviews")
+	}
+	_, err = g.Model("others_service").Ctx(ctx).TX(tx).Where("lot_id", req.Id).Delete()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting others_service records")
+	}
 	_, err = dao.ParkingLots.Ctx(ctx).TX(tx).Where("id", req.Id).Delete()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting parking lot")
 	}
 
-	_, err = dao.ParkingLotImages.Ctx(ctx).TX(tx).Where("parking_lot_id", req.Id).Delete()
+	_, err = dao.ParkingLotImages.Ctx(ctx).TX(tx).Where("lot_id", req.Id).Delete()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting parking lot images")
 	}
