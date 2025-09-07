@@ -25,7 +25,6 @@ func init() {
 	Init()
 }
 
-// License plate format: e.g., 29A-12345 or 51H-67890
 var licensePlateRegex = regexp.MustCompile(`^[0-9]{2}[A-Z]-[0-9]{4,5}$`)
 
 func (s *sVehicle) VehicleAdd(ctx context.Context, req *entity.VehicleAddReq) (*entity.VehicleAddRes, error) {
@@ -178,17 +177,8 @@ func (s *sVehicle) VehicleList(ctx context.Context, req *entity.VehicleListReq) 
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load vehicles. Please try again later.")
 	}
 
-	g.Log().Debug(ctx, "VehicleList - Records count:", len(records))
-	if len(records) > 0 {
-		g.Log().Debug(ctx, "VehicleList - First record:", records[0])
-		g.Log().Debug(ctx, "VehicleList - user_id value:", records[0]["user_id"])
-		g.Log().Debug(ctx, "VehicleList - username value:", records[0]["username"])
-	}
-
 	list := make([]entity.VehicleItem, 0, len(records))
 	for _, record := range records {
-		g.Log().Debug(ctx, "Processing record:", record)
-
 		username := ""
 		if record["username"] != nil && !record["username"].IsNil() {
 			username = record["username"].String()
@@ -198,8 +188,6 @@ func (s *sVehicle) VehicleList(ctx context.Context, req *entity.VehicleListReq) 
 		if record["user_id"] != nil && !record["user_id"].IsNil() {
 			userId = record["user_id"].Int64()
 		}
-
-		g.Log().Debug(ctx, "Processed - userId:", userId, "username:", username)
 
 		item := entity.VehicleItem{
 			Id:           record["id"].Int64(),
@@ -213,11 +201,9 @@ func (s *sVehicle) VehicleList(ctx context.Context, req *entity.VehicleListReq) 
 			CreatedAt:    record["created_at"].Time().Format("2006-01-02 15:04:05"),
 		}
 
-		g.Log().Debug(ctx, "Created item:", item)
 		list = append(list, item)
 	}
 
-	g.Log().Debug(ctx, "Final list before return:", list)
 	return &entity.VehicleListRes{
 		List:  list,
 		Total: total,
@@ -258,7 +244,7 @@ func (s *sVehicle) VehicleGet(ctx context.Context, req *entity.VehicleGetReq) (*
 
 	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 	if !isAdmin && vehicle.UserId != gconv.Int64(userID) {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only view your own vehicles or need admin access.")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins or the vehicle owner can view this vehicle.")
 	}
 
 	item := entity.VehicleItem{
@@ -292,7 +278,7 @@ func (s *sVehicle) VehicleUpdate(ctx context.Context, req *entity.VehicleUpdateR
 
 	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the vehicle. Please try again.")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load the vehicle. Please try again later.")
 	}
 	if vehicle.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeNotFound, "The vehicle could not be found.")
@@ -300,7 +286,7 @@ func (s *sVehicle) VehicleUpdate(ctx context.Context, req *entity.VehicleUpdateR
 
 	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 	if !isAdmin && gconv.Int64(vehicle.Map()["user_id"]) != gconv.Int64(userID) {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only update your own vehicles or need admin access.")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins or the vehicle owner can update this vehicle.")
 	}
 
 	if req.LicensePlate != "" {
@@ -373,7 +359,7 @@ func (s *sVehicle) VehicleUpdate(ctx context.Context, req *entity.VehicleUpdateR
 		updateData["type"] = req.Type
 	}
 	updateData["updated_at"] = gtime.Now()
-	_, err = dao.Vehicles.Ctx(ctx).TX(tx).Data(updateData).Where("id", req.Id).Update()
+	_, err = dao.Vehicles.Ctx(ctx).TX(tx).Data(updateData).Where("id", req.Id).Where("deleted_at IS NULL").Update()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the vehicle. Please try again later.")
 	}
@@ -429,7 +415,6 @@ func (s *sVehicle) VehicleUpdate(ctx context.Context, req *entity.VehicleUpdateR
 		Type:         updatedVehicle.Type,
 		CreatedAt:    updatedVehicle.CreatedAt.Format("2006-01-02 15:04:05"),
 		UpdatedAt:    updatedVehicle.UpdatedAt.Format("2006-01-02 15:04:05"),
-		DeletedAt:    updatedVehicle.DeletedAt.Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil
@@ -451,7 +436,7 @@ func (s *sVehicle) VehicleDelete(ctx context.Context, req *entity.VehicleDeleteR
 
 	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the vehicle. Please try again.")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load the vehicle. Please try again later.")
 	}
 	if vehicle.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeNotFound, "The vehicle could not be found.")
@@ -459,7 +444,7 @@ func (s *sVehicle) VehicleDelete(ctx context.Context, req *entity.VehicleDeleteR
 
 	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 	if !isAdmin && gconv.Int64(vehicle.Map()["user_id"]) != gconv.Int64(userID) {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only delete your own vehicles or need admin access.")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins or the vehicle owner can delete this vehicle.")
 	}
 
 	count, err := dao.ParkingOrders.Ctx(ctx).
@@ -486,10 +471,12 @@ func (s *sVehicle) VehicleDelete(ctx context.Context, req *entity.VehicleDeleteR
 
 	_, err = dao.Vehicles.Ctx(ctx).TX(tx).Data(g.Map{
 		"deleted_at": gtime.Now(),
-	}).Where("id", req.Id).Update()
+		"updated_at": gtime.Now(),
+	}).Where("id", req.Id).Where("deleted_at IS NULL").Update()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the vehicle. Please try again later.")
 	}
+
 	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).Where("deleted_at IS NULL").All()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the vehicle. Please try again later.")
@@ -521,7 +508,7 @@ func (s *sVehicle) VehicleDelete(ctx context.Context, req *entity.VehicleDeleteR
 func (s *sVehicle) CheckVehicleSlotCompatibility(ctx context.Context, vehicleID, slotID int64) error {
 	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", vehicleID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return gerror.NewCode(consts.CodeDatabaseError, "Unable to verify the vehicle. Please try again.")
+		return gerror.NewCode(consts.CodeDatabaseError, "Unable to load the vehicle. Please try again later.")
 	}
 	if vehicle.IsEmpty() {
 		return gerror.NewCode(consts.CodeNotFound, "The vehicle could not be found.")
@@ -529,7 +516,7 @@ func (s *sVehicle) CheckVehicleSlotCompatibility(ctx context.Context, vehicleID,
 
 	slot, err := dao.ParkingSlots.Ctx(ctx).Where("id", slotID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return gerror.NewCode(consts.CodeDatabaseError, "Unable to verify the parking slot. Please try again.")
+		return gerror.NewCode(consts.CodeDatabaseError, "Unable to load the parking slot. Please try again later.")
 	}
 	if slot.IsEmpty() {
 		return gerror.NewCode(consts.CodeNotFound, "The parking slot could not be found.")
