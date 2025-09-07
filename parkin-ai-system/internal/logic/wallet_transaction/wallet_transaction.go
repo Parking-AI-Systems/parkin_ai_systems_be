@@ -27,20 +27,20 @@ func init() {
 func (s *sWalletTransaction) WalletTransactionAdd(ctx context.Context, req *entity.WalletTransactionAddReq) (*entity.WalletTransactionAddRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to add a transaction.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
 	isAdmin := gconv.String(user.Map()["role"]) == "admin"
 	if !isAdmin && req.UserId != gconv.Int64(userID) {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only add transactions for yourself or must be an admin")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins or the account owner can add this transaction.")
 	}
 
 	// Validate transaction type
@@ -52,28 +52,28 @@ func (s *sWalletTransaction) WalletTransactionAdd(ctx context.Context, req *enti
 		}
 	}
 	if !isValidType {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Invalid transaction type")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Invalid transaction type. Please choose a valid type (e.g., deposit, payment).")
 	}
 
 	// Validate amount
 	if (req.Type == consts.TransactionTypeDeposit || req.Type == consts.TransactionTypeRefund) && req.Amount <= 0 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Amount must be positive for deposit or refund")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Amount must be positive for deposit or refund.")
 	}
 	if (req.Type == consts.TransactionTypePayment || req.Type == consts.TransactionTypeWithdrawal) && req.Amount >= 0 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Amount must be negative for payment or withdrawal")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Amount must be negative for payment or withdrawal.")
 	}
 
 	// Check related order for payment/refund
 	if req.RelatedOrderId != 0 {
 		// Check parking_orders
-		parkingOrder, err := dao.ParkingOrders.Ctx(ctx).Where("id", req.RelatedOrderId).One()
+		parkingOrder, err := dao.ParkingOrders.Ctx(ctx).Where("id", req.RelatedOrderId).Where("deleted_at IS NULL").One()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking order")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify the parking order. Please try again later.")
 		}
 		if !parkingOrder.IsEmpty() {
 			// Ensure order belongs to the user (unless admin)
 			if !isAdmin && gconv.Int64(parkingOrder.Map()["user_id"]) != gconv.Int64(userID) {
-				return nil, gerror.NewCode(consts.CodeUnauthorized, "Parking order does not belong to you")
+				return nil, gerror.NewCode(consts.CodeUnauthorized, "This parking order does not belong to you.")
 			}
 			// For payment, validate vehicle-slot compatibility
 			if req.Type == consts.TransactionTypePayment {
@@ -85,23 +85,23 @@ func (s *sWalletTransaction) WalletTransactionAdd(ctx context.Context, req *enti
 			}
 		} else {
 			// Check others_service_orders
-			serviceOrder, err := dao.OthersServiceOrders.Ctx(ctx).Where("id", req.RelatedOrderId).One()
+			serviceOrder, err := dao.OthersServiceOrders.Ctx(ctx).Where("id", req.RelatedOrderId).Where("deleted_at IS NULL").One()
 			if err != nil {
-				return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking service order")
+				return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify the service order. Please try again later.")
 			}
 			if serviceOrder.IsEmpty() {
-				return nil, gerror.NewCode(consts.CodeNotFound, "Related order not found in parking or service orders")
+				return nil, gerror.NewCode(consts.CodeNotFound, "Related order not found in parking or service orders.")
 			}
 			// Ensure order belongs to the user (unless admin)
 			if !isAdmin && gconv.Int64(serviceOrder.Map()["user_id"]) != gconv.Int64(userID) {
-				return nil, gerror.NewCode(consts.CodeUnauthorized, "Service order does not belong to you")
+				return nil, gerror.NewCode(consts.CodeUnauthorized, "This service order does not belong to you.")
 			}
 		}
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the transaction. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -117,16 +117,17 @@ func (s *sWalletTransaction) WalletTransactionAdd(ctx context.Context, req *enti
 		Description:    req.Description,
 		RelatedOrderId: req.RelatedOrderId,
 		CreatedAt:      gtime.Now(),
+		UpdatedAt:      gtime.Now(),
 	}
 	lastId, err := dao.WalletTransactions.Ctx(ctx).TX(tx).Data(data).InsertAndGetId()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the transaction. Please try again later.")
 	}
 
 	// Notify admins
-	adminUsers, err := dao.Users.Ctx(ctx).Where("role", "admin").All()
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", "admin").Where("deleted_at IS NULL").All()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to notify admins. Please try again later.")
 	}
 	for _, admin := range adminUsers {
 		notiData := do.Notifications{
@@ -139,13 +140,13 @@ func (s *sWalletTransaction) WalletTransactionAdd(ctx context.Context, req *enti
 		}
 		_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to create notification. Please try again later.")
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the transaction. Please try again later.")
 	}
 
 	return &entity.WalletTransactionAddRes{Id: lastId}, nil
@@ -154,22 +155,26 @@ func (s *sWalletTransaction) WalletTransactionAdd(ctx context.Context, req *enti
 func (s *sWalletTransaction) WalletTransactionList(ctx context.Context, req *entity.WalletTransactionListReq) (*entity.WalletTransactionListRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view transactions.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
 	m := dao.WalletTransactions.Ctx(ctx).
 		Fields("wallet_transactions.*, users.username, parking_orders.vehicle_id, others_service_orders.service_id").
 		LeftJoin("users", "users.id = wallet_transactions.user_id").
 		LeftJoin("parking_orders", "parking_orders.id = wallet_transactions.related_order_id").
-		LeftJoin("others_service_orders", "others_service_orders.id = wallet_transactions.related_order_id")
+		LeftJoin("others_service_orders", "others_service_orders.id = wallet_transactions.related_order_id").
+		Where("wallet_transactions.deleted_at IS NULL").
+		Where("users.deleted_at IS NULL OR users.deleted_at IS NOT NULL").
+		Where("parking_orders.deleted_at IS NULL OR parking_orders.deleted_at IS NOT NULL").
+		Where("others_service_orders.deleted_at IS NULL OR others_service_orders.deleted_at IS NOT NULL")
 
 	isAdmin := gconv.String(user.Map()["role"]) == "admin"
 	if !isAdmin {
@@ -185,7 +190,7 @@ func (s *sWalletTransaction) WalletTransactionList(ctx context.Context, req *ent
 
 	total, err := m.Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error counting transactions")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load transactions. Please try again later.")
 	}
 
 	if req.Page <= 0 {
@@ -204,7 +209,7 @@ func (s *sWalletTransaction) WalletTransactionList(ctx context.Context, req *ent
 	}
 	err = m.Order("wallet_transactions.id DESC").Scan(&transactions)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving transactions")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load transactions. Please try again later.")
 	}
 
 	list := make([]entity.WalletTransactionItem, 0, len(transactions))
@@ -212,13 +217,13 @@ func (s *sWalletTransaction) WalletTransactionList(ctx context.Context, req *ent
 		var licensePlate string
 		var serviceType string
 		if t.VehicleId != 0 {
-			vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", t.VehicleId).One()
+			vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", t.VehicleId).Where("deleted_at IS NULL").One()
 			if err == nil && !vehicle.IsEmpty() {
 				licensePlate = gconv.String(vehicle.Map()["license_plate"])
 			}
 		}
 		if t.ServiceId != 0 {
-			service, err := dao.OthersService.Ctx(ctx).Where("id", t.ServiceId).One()
+			service, err := dao.OthersService.Ctx(ctx).Where("id", t.ServiceId).Where("deleted_at IS NULL").One()
 			if err == nil && !service.IsEmpty() {
 				serviceType = gconv.String(service.Map()["service_type"])
 			}
@@ -247,15 +252,15 @@ func (s *sWalletTransaction) WalletTransactionList(ctx context.Context, req *ent
 func (s *sWalletTransaction) WalletTransactionGet(ctx context.Context, req *entity.WalletTransactionGetReq) (*entity.WalletTransactionItem, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view transaction details.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
 	var transaction struct {
@@ -270,29 +275,33 @@ func (s *sWalletTransaction) WalletTransactionGet(ctx context.Context, req *enti
 		LeftJoin("parking_orders", "parking_orders.id = wallet_transactions.related_order_id").
 		LeftJoin("others_service_orders", "others_service_orders.id = wallet_transactions.related_order_id").
 		Where("wallet_transactions.id", req.Id).
+		Where("wallet_transactions.deleted_at IS NULL").
+		Where("users.deleted_at IS NULL OR users.deleted_at IS NOT NULL").
+		Where("parking_orders.deleted_at IS NULL OR parking_orders.deleted_at IS NOT NULL").
+		Where("others_service_orders.deleted_at IS NULL OR others_service_orders.deleted_at IS NOT NULL").
 		Scan(&transaction)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load transaction details. Please try again later.")
 	}
 	if transaction.Id == 0 {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Transaction not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "Transaction not found.")
 	}
 
 	isAdmin := gconv.String(user.Map()["role"]) == "admin"
 	if !isAdmin && transaction.UserId != gconv.Int64(userID) {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only view your own transactions or must be an admin")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins or the account owner can view this transaction.")
 	}
 
 	var licensePlate string
 	var serviceType string
 	if transaction.VehicleId != 0 {
-		vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", transaction.VehicleId).One()
+		vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", transaction.VehicleId).Where("deleted_at IS NULL").One()
 		if err == nil && !vehicle.IsEmpty() {
 			licensePlate = gconv.String(vehicle.Map()["license_plate"])
 		}
 	}
 	if transaction.ServiceId != 0 {
-		service, err := dao.OthersService.Ctx(ctx).Where("id", transaction.ServiceId).One()
+		service, err := dao.OthersService.Ctx(ctx).Where("id", transaction.ServiceId).Where("deleted_at IS NULL").One()
 		if err == nil && !service.IsEmpty() {
 			serviceType = gconv.String(service.Map()["service_type"])
 		}
