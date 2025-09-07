@@ -27,12 +27,12 @@ func init() {
 func (s *sOthersService) OthersServiceAdd(ctx context.Context, req *entity.OthersServiceAddReq) (*entity.OthersServiceAddRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to add a service")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking user details")
 	}
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
@@ -43,25 +43,25 @@ func (s *sOthersService) OthersServiceAdd(ctx context.Context, req *entity.Other
 
 	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking the parking lot")
 	}
 	if lot.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeParkingLotNotFound, "Parking lot not found")
 	}
 
 	if req.Name == "" {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Service name is required")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Please provide a service name")
 	}
 	if req.Price <= 0 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Price must be positive")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Service price must be greater than 0")
 	}
 	if req.DurationMinutes <= 0 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Duration must be positive")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Service duration must be greater than 0")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while starting the transaction")
 	}
 	defer func() {
 		if err != nil {
@@ -80,7 +80,7 @@ func (s *sOthersService) OthersServiceAdd(ctx context.Context, req *entity.Other
 	}
 	lastId, err := dao.OthersService.Ctx(ctx).TX(tx).Data(data).InsertAndGetId()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating service")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the service")
 	}
 
 	notiData := do.Notifications{
@@ -93,12 +93,12 @@ func (s *sOthersService) OthersServiceAdd(ctx context.Context, req *entity.Other
 	}
 	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while creating the notification")
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while saving the changes")
 	}
 
 	return &entity.OthersServiceAddRes{Id: lastId}, nil
@@ -107,12 +107,12 @@ func (s *sOthersService) OthersServiceAdd(ctx context.Context, req *entity.Other
 func (s *sOthersService) OthersServiceList(ctx context.Context, req *entity.OthersServiceListReq) (*entity.OthersServiceListRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view the service list")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking user details")
 	}
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
@@ -120,7 +120,9 @@ func (s *sOthersService) OthersServiceList(ctx context.Context, req *entity.Othe
 
 	// Build base query conditions
 	baseQuery := dao.OthersService.Ctx(ctx).
-		LeftJoin("parking_lots", "parking_lots.id = others_service.lot_id")
+		LeftJoin("parking_lots", "parking_lots.id = others_service.lot_id").
+		Where("others_service.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL")
 
 	if req.LotId != 0 {
 		baseQuery = baseQuery.Where("others_service.lot_id", req.LotId)
@@ -132,7 +134,7 @@ func (s *sOthersService) OthersServiceList(ctx context.Context, req *entity.Othe
 	// Count query - use simple field
 	total, err := baseQuery.Fields("others_service.id").Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error counting services")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while counting services")
 	}
 
 	if req.Page <= 0 {
@@ -151,7 +153,7 @@ func (s *sOthersService) OthersServiceList(ctx context.Context, req *entity.Othe
 		Limit(req.PageSize).Offset((req.Page - 1) * req.PageSize).
 		Order("others_service.id DESC").Scan(&services)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving services")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while retrieving the service list")
 	}
 
 	list := make([]entity.OthersServiceItem, 0, len(services))
@@ -166,6 +168,8 @@ func (s *sOthersService) OthersServiceList(ctx context.Context, req *entity.Othe
 			DurationMinutes: svc.DurationMinutes,
 			IsActive:        svc.IsActive,
 			CreatedAt:       svc.CreatedAt.Format("2006-01-02 15:04:05"),
+			UpdatedAt:       svc.UpdatedAt.Format("2006-01-02 15:04:05"),
+			DeletedAt:       svc.DeletedAt.Format("2006-01-02 15:04:05"),
 		}
 		list = append(list, item)
 	}
@@ -179,12 +183,12 @@ func (s *sOthersService) OthersServiceList(ctx context.Context, req *entity.Othe
 func (s *sOthersService) OthersServiceGet(ctx context.Context, req *entity.OthersServiceGetReq) (*entity.OthersServiceItem, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view service details")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking user details")
 	}
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
@@ -198,9 +202,11 @@ func (s *sOthersService) OthersServiceGet(ctx context.Context, req *entity.Other
 		Fields("others_service.*, parking_lots.name as lot_name").
 		LeftJoin("parking_lots", "parking_lots.id = others_service.lot_id").
 		Where("others_service.id", req.Id).
+		Where("others_service.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL").
 		Scan(&svc)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving service")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while retrieving service details")
 	}
 	if svc.Id == 0 {
 		return nil, gerror.NewCode(consts.CodeNotFound, "Service not found")
@@ -216,6 +222,8 @@ func (s *sOthersService) OthersServiceGet(ctx context.Context, req *entity.Other
 		DurationMinutes: svc.DurationMinutes,
 		IsActive:        svc.IsActive,
 		CreatedAt:       svc.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt:       svc.UpdatedAt.Format("2006-01-02 15:04:05"),
+		DeletedAt:       svc.DeletedAt.Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil
@@ -224,12 +232,12 @@ func (s *sOthersService) OthersServiceGet(ctx context.Context, req *entity.Other
 func (s *sOthersService) OthersServiceUpdate(ctx context.Context, req *entity.OthersServiceUpdateReq) (*entity.OthersServiceItem, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to update the service")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking user details")
 	}
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
@@ -238,18 +246,18 @@ func (s *sOthersService) OthersServiceUpdate(ctx context.Context, req *entity.Ot
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can update services")
 	}
 
-	svc, err := dao.OthersService.Ctx(ctx).Where("id", req.Id).One()
+	svc, err := dao.OthersService.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking service")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking the service")
 	}
 	if svc.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeNotFound, "Service not found")
 	}
 
 	if req.LotId != 0 {
-		lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).One()
+		lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).Where("deleted_at IS NULL").One()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking lot")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking the parking lot")
 		}
 		if lot.IsEmpty() {
 			return nil, gerror.NewCode(consts.CodeParkingLotNotFound, "Parking lot not found")
@@ -260,15 +268,15 @@ func (s *sOthersService) OthersServiceUpdate(ctx context.Context, req *entity.Ot
 		return nil, gerror.NewCode(consts.CodeInvalidInput, "Service name cannot be empty")
 	}
 	if req.Price < 0 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Price must be non-negative")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Service price cannot be negative")
 	}
 	if req.DurationMinutes < 0 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Duration must be non-negative")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Service duration cannot be negative")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while starting the transaction")
 	}
 	defer func() {
 		if err != nil {
@@ -298,7 +306,7 @@ func (s *sOthersService) OthersServiceUpdate(ctx context.Context, req *entity.Ot
 	updateData["updated_at"] = gtime.Now()
 	_, err = dao.OthersService.Ctx(ctx).TX(tx).Data(updateData).Where("id", req.Id).Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating service")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the service")
 	}
 
 	notiData := do.Notifications{
@@ -311,12 +319,12 @@ func (s *sOthersService) OthersServiceUpdate(ctx context.Context, req *entity.Ot
 	}
 	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while creating the notification")
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while saving the changes")
 	}
 
 	var updatedSvc struct {
@@ -327,9 +335,11 @@ func (s *sOthersService) OthersServiceUpdate(ctx context.Context, req *entity.Ot
 		Fields("others_service.*, parking_lots.name as lot_name").
 		LeftJoin("parking_lots", "parking_lots.id = others_service.lot_id").
 		Where("others_service.id", req.Id).
+		Where("others_service.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL").
 		Scan(&updatedSvc)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving updated service")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while retrieving the updated service")
 	}
 
 	item := entity.OthersServiceItem{
@@ -352,12 +362,12 @@ func (s *sOthersService) OthersServiceUpdate(ctx context.Context, req *entity.Ot
 func (s *sOthersService) OthersServiceDelete(ctx context.Context, req *entity.OthersServiceDeleteReq) (*entity.OthersServiceDeleteRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to delete the service")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking user details")
 	}
 	if user.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
@@ -366,9 +376,9 @@ func (s *sOthersService) OthersServiceDelete(ctx context.Context, req *entity.Ot
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can delete services")
 	}
 
-	svc, err := dao.OthersService.Ctx(ctx).Where("id", req.Id).One()
+	svc, err := dao.OthersService.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking service")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking the service")
 	}
 	if svc.IsEmpty() {
 		return nil, gerror.NewCode(consts.CodeNotFound, "Service not found")
@@ -379,15 +389,15 @@ func (s *sOthersService) OthersServiceDelete(ctx context.Context, req *entity.Ot
 		Where("status", "confirmed").
 		Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking active orders")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while checking active orders")
 	}
 	if count > 0 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Cannot delete service with active orders")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Cannot delete the service because it has active orders")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while starting the transaction")
 	}
 	defer func() {
 		if err != nil {
@@ -399,7 +409,7 @@ func (s *sOthersService) OthersServiceDelete(ctx context.Context, req *entity.Ot
 		"deleted_at": gtime.Now(),
 	}).Where("id", req.Id).Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting service")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the service")
 	}
 	notiData := do.Notifications{
 		UserId:         userID,
@@ -411,12 +421,12 @@ func (s *sOthersService) OthersServiceDelete(ctx context.Context, req *entity.Ot
 	}
 	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while creating the notification")
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while saving the changes")
 	}
 
 	return &entity.OthersServiceDeleteRes{Message: "Service deleted successfully"}, nil
