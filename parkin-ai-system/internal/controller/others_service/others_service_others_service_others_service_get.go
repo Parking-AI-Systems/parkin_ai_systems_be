@@ -46,5 +46,7 @@ func entityToApiOthersServiceItem(e *entity.OthersServiceItem) others_service.Ot
 		DurationMinutes: e.DurationMinutes,
 		IsActive:        e.IsActive,
 		CreatedAt:       e.CreatedAt,
+		UpdatedAt:       e.UpdatedAt,
+		DeletedAt:       e.DeletedAt,
 	}
 }
