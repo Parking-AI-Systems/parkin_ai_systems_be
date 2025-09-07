@@ -19,4 +19,6 @@ type WalletTransactions struct {
 	Description    interface{} //
 	RelatedOrderId interface{} //
 	CreatedAt      *gtime.Time //
+	UpdatedAt      *gtime.Time //
+	DeletedAt      *gtime.Time //
 }

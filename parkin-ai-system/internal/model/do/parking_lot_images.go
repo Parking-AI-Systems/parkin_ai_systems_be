@@ -17,4 +17,6 @@ type ParkingLotImages struct {
 	ImageUrl   interface{} //
 	UploadedBy interface{} //
 	CreatedAt  *gtime.Time //
+	UpdatedAt  *gtime.Time //
+	DeletedAt  *gtime.Time //
 }

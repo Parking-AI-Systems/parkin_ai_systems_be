@@ -14,6 +14,8 @@ type Favorites struct {
 	UserId    int64       `json:"userId"    orm:"user_id"    description:""`
 	LotId     int64       `json:"lotId"     orm:"lot_id"     description:""`
 	CreatedAt *gtime.Time `json:"createdAt" orm:"created_at" description:""`
+	UpdatedAt *gtime.Time `json:"updatedAt" orm:"updated_at" description:""`
+	DeletedAt *gtime.Time `json:"deletedAt" orm:"deleted_at" description:""`
 }
 type FavoriteAddReq struct {
 	LotId int64 `json:"lotId"`
@@ -36,6 +38,8 @@ type FavoriteItem struct {
 	LotName    string `json:"lot_name"`
 	LotAddress string `json:"lot_address"`
 	CreatedAt  string `json:"created_at"`
+	UpdatedAt  string `json:"updated_at"`
+	DeletedAt  string `json:"deleted_at"`
 }
 
 type FavoriteListRes struct {

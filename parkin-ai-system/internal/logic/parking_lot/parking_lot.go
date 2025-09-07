@@ -29,48 +29,48 @@ func init() {
 func (s *sParkingLot) ParkingLotAdd(ctx context.Context, req *entity.ParkingLotAddReq) (*entity.ParkingLotAddRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to add a parking lot.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can create parking lots")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can create parking lots.")
 	}
 
 	if req.Name == "" || req.Address == "" {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Name and address are required")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Please provide both a name and address for the parking lot.")
 	}
 	if req.TotalSlots <= 0 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Total slots must be positive")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "The number of parking slots must be greater than zero.")
 	}
 	if req.PricePerHour <= 0 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Price per hour must be positive")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "The price per hour must be greater than zero.")
 	}
 	if req.Latitude == 0 || req.Longitude == 0 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Valid latitude and longitude are required")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Please provide valid latitude and longitude coordinates.")
 	}
 
 	if req.OpenTime == nil || req.CloseTime == nil {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Open time and close time are required")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Please specify both open and close times.")
 	}
 	if req.CloseTime.Before(req.OpenTime) {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Close time must be after open time")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "The close time must be later than the open time.")
 	}
 	for _, img := range req.Images {
 		if img.ImageUrl == "" {
-			return nil, gerror.NewCode(consts.CodeInvalidInput, "Image URL is required for all images")
+			return nil, gerror.NewCode(consts.CodeInvalidInput, "Please provide a valid image URL for each image.")
 		}
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the parking lot. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -96,7 +96,7 @@ func (s *sParkingLot) ParkingLotAdd(ctx context.Context, req *entity.ParkingLotA
 	}
 	lastId, err := dao.ParkingLots.Ctx(ctx).TX(tx).Data(data).InsertAndGetId()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating parking lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the parking lot. Please try again later.")
 	}
 
 	for _, img := range req.Images {
@@ -107,7 +107,7 @@ func (s *sParkingLot) ParkingLotAdd(ctx context.Context, req *entity.ParkingLotA
 		}
 		_, err = dao.ParkingLotImages.Ctx(ctx).TX(tx).Data(imgData).Insert()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error adding parking lot image")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the parking lot. Please try again later.")
 		}
 	}
 
@@ -121,12 +121,12 @@ func (s *sParkingLot) ParkingLotAdd(ctx context.Context, req *entity.ParkingLotA
 	}
 	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the parking lot. Please try again later.")
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the parking lot. Please try again later.")
 	}
 
 	return &entity.ParkingLotAddRes{Id: lastId}, nil
@@ -135,18 +135,18 @@ func (s *sParkingLot) ParkingLotAdd(ctx context.Context, req *entity.ParkingLotA
 func (s *sParkingLot) ParkingLotList(ctx context.Context, req *entity.ParkingLotListReq) (*entity.ParkingLotListRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view parking lots.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
-	m := dao.ParkingLots.Ctx(ctx)
+	m := dao.ParkingLots.Ctx(ctx).Where("deleted_at IS NULL")
 	if req.IsActive {
 		m = m.Where("is_active", true)
 	}
@@ -160,7 +160,7 @@ func (s *sParkingLot) ParkingLotList(ctx context.Context, req *entity.ParkingLot
 
 	total, err := m.Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error counting parking lots")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load parking lots. Please try again later.")
 	}
 
 	if req.Page <= 0 {
@@ -174,15 +174,15 @@ func (s *sParkingLot) ParkingLotList(ctx context.Context, req *entity.ParkingLot
 	var lots []entity.ParkingLots
 	err = m.Order("id DESC").Scan(&lots)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving parking lots")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load parking lots. Please try again later.")
 	}
 
 	list := make([]entity.ParkingLotItem, 0, len(lots))
 	for _, lot := range lots {
 		var images []entity.ParkingLotImages
-		err = dao.ParkingLotImages.Ctx(ctx).Where("lot_id", lot.Id).Scan(&images)
+		err = dao.ParkingLotImages.Ctx(ctx).Where("lot_id", lot.Id).Where("deleted_at IS NULL").Scan(&images)
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving images for parking lot")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load images for the parking lot. Please try again later.")
 		}
 
 		imageItems := make([]entity.ParkingLotImageItem, 0, len(images))
@@ -228,32 +228,33 @@ func (s *sParkingLot) ParkingLotList(ctx context.Context, req *entity.ParkingLot
 }
 
 func (s *sParkingLot) ParkingLotGet(ctx context.Context, req *entity.ParkingLotGetReq) (*entity.ParkingLotItem, error) {
+	// Uncomment if user authentication is required
 	// userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	// if userID == "" {
-	// 	return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+	// 	return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view parking lot details.")
 	// }
-
-	// user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	//
+	// user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	// if err != nil {
-	// 	return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+	// 	return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	// }
 	// if user.IsEmpty() {
-	// 	return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+	// 	return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	// }
 
 	var lot entity.ParkingLots
-	err := dao.ParkingLots.Ctx(ctx).Where("id", req.Id).Scan(&lot)
+	err := dao.ParkingLots.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").Scan(&lot)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving parking lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load parking lot details. Please try again later.")
 	}
 	if lot.Id == 0 {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Parking lot not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The parking lot could not be found.")
 	}
 
 	var images []entity.ParkingLotImages
-	err = dao.ParkingLotImages.Ctx(ctx).Where("lot_id", lot.Id).Scan(&images)
+	err = dao.ParkingLotImages.Ctx(ctx).Where("lot_id", lot.Id).Where("deleted_at IS NULL").Scan(&images)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving images for parking lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load images for the parking lot. Please try again later.")
 	}
 
 	imageItems := make([]entity.ParkingLotImageItem, 0, len(images))
@@ -296,35 +297,35 @@ func (s *sParkingLot) ParkingLotGet(ctx context.Context, req *entity.ParkingLotG
 func (s *sParkingLot) ParkingLotUpdate(ctx context.Context, req *entity.ParkingLotUpdateReq) (*entity.ParkingLotItem, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to update parking lot details.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
-	if gconv.String(user.Map()["role"]) != "admin" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can update parking lots")
+	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can update parking lots.")
 	}
 
-	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.Id).One()
+	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the parking lot. Please try again.")
 	}
 	if lot.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Parking lot not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The parking lot could not be found.")
 	}
 
 	if req.CloseTime != nil && req.OpenTime != nil && req.CloseTime.Before(req.OpenTime) {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Close time must be after open time")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "The close time must be later than the open time.")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the parking lot. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -357,7 +358,7 @@ func (s *sParkingLot) ParkingLotUpdate(ctx context.Context, req *entity.ParkingL
 		currentAvailable := gconv.Int(lot.Map()["available_slots"])
 		currentTotal := gconv.Int(lot.Map()["total_slots"])
 		if req.TotalSlots < currentTotal-currentAvailable {
-			return nil, gerror.NewCode(consts.CodeInvalidInput, "Total slots cannot be less than occupied slots")
+			return nil, gerror.NewCode(consts.CodeInvalidInput, "The number of slots cannot be less than those currently occupied.")
 		}
 		updateData["total_slots"] = req.TotalSlots
 		updateData["available_slots"] = req.TotalSlots - (currentTotal - currentAvailable)
@@ -378,9 +379,9 @@ func (s *sParkingLot) ParkingLotUpdate(ctx context.Context, req *entity.ParkingL
 		updateData["image_url"] = req.ImageUrl
 	}
 
-	_, err = dao.ParkingLots.Ctx(ctx).TX(tx).Data(updateData).Where("id", req.Id).Update()
+	_, err = dao.ParkingLots.Ctx(ctx).TX(tx).Data(updateData).Where("id", req.Id).Where("deleted_at IS NULL").Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating parking lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the parking lot. Please try again later.")
 	}
 
 	notiData := do.Notifications{
@@ -393,24 +394,24 @@ func (s *sParkingLot) ParkingLotUpdate(ctx context.Context, req *entity.ParkingL
 	}
 	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the parking lot. Please try again later.")
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the parking lot. Please try again later.")
 	}
 
 	var updatedLot entity.ParkingLots
-	err = dao.ParkingLots.Ctx(ctx).Where("id", req.Id).Scan(&updatedLot)
+	err = dao.ParkingLots.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").Scan(&updatedLot)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving updated parking lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load updated parking lot details. Please try again later.")
 	}
 
 	var images []entity.ParkingLotImages
-	err = dao.ParkingLotImages.Ctx(ctx).Where("lot_id", updatedLot.Id).Scan(&images)
+	err = dao.ParkingLotImages.Ctx(ctx).Where("lot_id", updatedLot.Id).Where("deleted_at IS NULL").Scan(&images)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving images for parking lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load images for the parking lot. Please try again later.")
 	}
 
 	imageItems := make([]entity.ParkingLotImageItem, 0, len(images))
@@ -431,6 +432,7 @@ func (s *sParkingLot) ParkingLotUpdate(ctx context.Context, req *entity.ParkingL
 		Address:        updatedLot.Address,
 		Latitude:       updatedLot.Latitude,
 		Longitude:      updatedLot.Longitude,
+		OwnerId:        updatedLot.OwnerId,
 		IsVerified:     updatedLot.IsVerified,
 		IsActive:       updatedLot.IsActive,
 		TotalSlots:     updatedLot.TotalSlots,
@@ -452,68 +454,88 @@ func (s *sParkingLot) ParkingLotUpdate(ctx context.Context, req *entity.ParkingL
 func (s *sParkingLot) ParkingLotDelete(ctx context.Context, req *entity.ParkingLotDeleteReq) (*entity.ParkingLotDeleteRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to delete a parking lot.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can delete parking lots")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can delete parking lots.")
 	}
 
-	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.Id).One()
+	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the parking lot. Please try again.")
 	}
 	if lot.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Parking lot not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The parking lot could not be found.")
 	}
 
 	count, err := dao.ParkingOrders.Ctx(ctx).
 		Where("lot_id", req.Id).
 		Where("status", "confirmed").
+		Where("deleted_at IS NULL").
 		Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking active orders")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to check parking lot orders. Please try again later.")
 	}
 	if count > 0 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Cannot delete parking lot with active orders")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Cannot delete this parking lot because it has active bookings.")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the parking lot. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
 			tx.Rollback()
 		}
 	}()
-	_, err = dao.ParkingSlots.Ctx(ctx).TX(tx).Where("lot_id", req.Id).Delete()
+
+	_, err = dao.ParkingSlots.Ctx(ctx).TX(tx).Data(g.Map{
+		"deleted_at": gtime.Now(),
+		"updated_at": gtime.Now(),
+	}).Where("lot_id", req.Id).Where("deleted_at IS NULL").Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting parking slots")
-	}
-	_, err = dao.ParkingLotReviews.Ctx(ctx).TX(tx).Where("lot_id", req.Id).Delete()
-	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting parking lot reviews")
-	}
-	_, err = g.Model("others_service").Ctx(ctx).TX(tx).Where("lot_id", req.Id).Delete()
-	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting others_service records")
-	}
-	_, err = dao.ParkingLots.Ctx(ctx).TX(tx).Where("id", req.Id).Delete()
-	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting parking lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the parking lot. Please try again later.")
 	}
 
-	_, err = dao.ParkingLotImages.Ctx(ctx).TX(tx).Where("lot_id", req.Id).Delete()
+	_, err = dao.ParkingLotReviews.Ctx(ctx).TX(tx).Data(g.Map{
+		"deleted_at": gtime.Now(),
+		"updated_at": gtime.Now(),
+	}).Where("lot_id", req.Id).Where("deleted_at IS NULL").Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting parking lot images")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the parking lot. Please try again later.")
+	}
+
+	_, err = g.Model("others_service").Ctx(ctx).TX(tx).Data(g.Map{
+		"deleted_at": gtime.Now(),
+		"updated_at": gtime.Now(),
+	}).Where("lot_id", req.Id).Where("deleted_at IS NULL").Update()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the parking lot. Please try again later.")
+	}
+
+	_, err = dao.ParkingLots.Ctx(ctx).TX(tx).Data(g.Map{
+		"deleted_at": gtime.Now(),
+		"updated_at": gtime.Now(),
+	}).Where("id", req.Id).Where("deleted_at IS NULL").Update()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the parking lot. Please try again later.")
+	}
+
+	_, err = dao.ParkingLotImages.Ctx(ctx).TX(tx).Data(g.Map{
+		"deleted_at": gtime.Now(),
+		"updated_at": gtime.Now(),
+	}).Where("lot_id", req.Id).Where("deleted_at IS NULL").Update()
+	if err != nil {
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the parking lot. Please try again later.")
 	}
 
 	notiData := do.Notifications{
@@ -526,12 +548,12 @@ func (s *sParkingLot) ParkingLotDelete(ctx context.Context, req *entity.ParkingL
 	}
 	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the parking lot. Please try again later.")
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the parking lot. Please try again later.")
 	}
 
 	return &entity.ParkingLotDeleteRes{Message: "Parking lot deleted successfully"}, nil
@@ -540,31 +562,31 @@ func (s *sParkingLot) ParkingLotDelete(ctx context.Context, req *entity.ParkingL
 func (s *sParkingLot) ParkingLotImageDelete(ctx context.Context, req *entity.ParkingLotImageDeleteReq) (*entity.ParkingLotImageDeleteRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to delete a parking lot image.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
-	if gconv.String(user.Map()["role"]) != "admin" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can delete parking lot images")
+	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can delete parking lot images.")
 	}
 
-	img, err := dao.ParkingLotImages.Ctx(ctx).Where("id", req.Id).One()
+	img, err := dao.ParkingLotImages.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking image")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the image. Please try again.")
 	}
 	if img.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Image not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The image could not be found.")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the image. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -572,27 +594,30 @@ func (s *sParkingLot) ParkingLotImageDelete(ctx context.Context, req *entity.Par
 		}
 	}()
 
-	_, err = dao.ParkingLotImages.Ctx(ctx).TX(tx).Where("id", req.Id).Delete()
+	_, err = dao.ParkingLotImages.Ctx(ctx).TX(tx).Data(g.Map{
+		"deleted_at": gtime.Now(),
+		"updated_at": gtime.Now(),
+	}).Where("id", req.Id).Where("deleted_at IS NULL").Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting image")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the image. Please try again later.")
 	}
 
 	notiData := do.Notifications{
 		UserId:         userID,
 		Type:           "parking_lot_image_deleted",
-		Content:        fmt.Sprintf("Image #%d for parking lot #%d has been deleted.", req.Id, img.Map()["parking_lot_id"]),
+		Content:        fmt.Sprintf("Image #%d for parking lot #%d has been deleted.", req.Id, img.Map()["lot_id"]),
 		RelatedOrderId: req.Id,
 		IsRead:         false,
 		CreatedAt:      gtime.Now(),
 	}
 	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the image. Please try again later.")
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the image. Please try again later.")
 	}
 
 	return &entity.ParkingLotImageDeleteRes{Message: "Parking lot image deleted successfully"}, nil

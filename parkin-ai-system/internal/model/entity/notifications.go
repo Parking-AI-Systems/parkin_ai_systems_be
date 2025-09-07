@@ -17,6 +17,8 @@ type Notifications struct {
 	RelatedOrderId int64       `json:"relatedOrderId" orm:"related_order_id" description:""`
 	IsRead         bool        `json:"isRead"         orm:"is_read"          description:""`
 	CreatedAt      *gtime.Time `json:"createdAt"      orm:"created_at"       description:""`
+	UpdatedAt      *gtime.Time `json:"updatedAt"      orm:"updated_at"       description:""`
+	DeletedAt      *gtime.Time `json:"deletedAt"      orm:"deleted_at"       description:""`
 }
 
 type NotificationListReq struct {
@@ -33,6 +35,8 @@ type NotificationItem struct {
 	RelatedOrderId int64  `json:"related_order_id"`
 	IsRead         bool   `json:"is_read"`
 	CreatedAt      string `json:"created_at"`
+	UpdatedAt      string `json:"updated_at"`
+	DeletedAt      string `json:"deleted_at"`
 	RelatedInfo    string `json:"related_info"`
 }
 

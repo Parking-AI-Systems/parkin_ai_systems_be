@@ -16,4 +16,6 @@ type Favorites struct {
 	UserId    interface{} //
 	LotId     interface{} //
 	CreatedAt *gtime.Time //
+	UpdatedAt *gtime.Time //
+	DeletedAt *gtime.Time //
 }

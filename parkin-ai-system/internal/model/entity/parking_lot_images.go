@@ -15,4 +15,6 @@ type ParkingLotImages struct {
 	ImageUrl   string      `json:"imageUrl"   orm:"image_url"   description:""`
 	UploadedBy int64       `json:"uploadedBy" orm:"uploaded_by" description:""`
 	CreatedAt  *gtime.Time `json:"createdAt"  orm:"created_at"  description:""`
+	UpdatedAt  *gtime.Time `json:"updatedAt"  orm:"updated_at"  description:""`
+	DeletedAt  *gtime.Time `json:"deletedAt"  orm:"deleted_at"  description:""`
 }

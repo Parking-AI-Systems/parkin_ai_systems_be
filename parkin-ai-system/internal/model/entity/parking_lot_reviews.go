@@ -16,6 +16,8 @@ type ParkingLotReviews struct {
 	Rating    int         `json:"rating"    orm:"rating"     description:""`
 	Comment   string      `json:"comment"   orm:"comment"    description:""`
 	CreatedAt *gtime.Time `json:"createdAt" orm:"created_at" description:""`
+	UpdatedAt *gtime.Time `json:"updatedAt" orm:"updated_at" description:""`
+	DeletedAt *gtime.Time `json:"deletedAt" orm:"deleted_at" description:""`
 }
 
 type ParkingLotReviewAddReq struct {

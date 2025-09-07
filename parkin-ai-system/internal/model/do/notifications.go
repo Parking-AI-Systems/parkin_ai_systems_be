@@ -19,4 +19,6 @@ type Notifications struct {
 	RelatedOrderId interface{} //
 	IsRead         interface{} //
 	CreatedAt      *gtime.Time //
+	UpdatedAt      *gtime.Time //
+	DeletedAt      *gtime.Time //
 }

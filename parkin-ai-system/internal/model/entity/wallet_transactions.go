@@ -17,6 +17,8 @@ type WalletTransactions struct {
 	Description    string      `json:"description"    orm:"description"      description:""`
 	RelatedOrderId int64       `json:"relatedOrderId" orm:"related_order_id" description:""`
 	CreatedAt      *gtime.Time `json:"createdAt"      orm:"created_at"       description:""`
+	UpdatedAt      *gtime.Time `json:"updatedAt"      orm:"updated_at"       description:""`
+	DeletedAt      *gtime.Time `json:"deletedAt"      orm:"deleted_at"       description:""`
 }
 
 type WalletTransactionAddReq struct {
@@ -49,6 +51,8 @@ type WalletTransactionItem struct {
 	LicensePlate   string  `json:"license_plate"`
 	ServiceType    string  `json:"service_type"`
 	CreatedAt      string  `json:"created_at"`
+	UpdatedAt      string  `json:"updated_at"`
+	DeletedAt      string  `json:"deleted_at"`
 }
 
 type WalletTransactionListRes struct {

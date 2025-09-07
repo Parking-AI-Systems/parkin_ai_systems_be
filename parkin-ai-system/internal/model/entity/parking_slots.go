@@ -17,6 +17,8 @@ type ParkingSlots struct {
 	SlotType    string      `json:"slotType"    orm:"slot_type"    description:""`
 	Floor       string      `json:"floor"       orm:"floor"        description:""`
 	CreatedAt   *gtime.Time `json:"createdAt"   orm:"created_at"   description:""`
+	UpdatedAt   *gtime.Time `json:"updatedAt"   orm:"updated_at"   description:""`
+	DeletedAt   *gtime.Time `json:"deletedAt"   orm:"deleted_at"   description:""`
 }
 
 type ParkingSlotAddReq struct {
@@ -48,6 +50,8 @@ type ParkingSlotItem struct {
 	SlotType    string `json:"slot_type"`
 	Floor       string `json:"floor"`
 	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
+	DeletedAt   string `json:"deleted_at"`
 }
 
 type ParkingSlotListRes struct {

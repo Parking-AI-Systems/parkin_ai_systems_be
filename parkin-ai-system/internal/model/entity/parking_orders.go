@@ -59,6 +59,7 @@ type ParkingOrderItem struct {
 	PaymentStatus string      `json:"payment_status"` // Payment status
 	CreatedAt     string      `json:"created_at"`    // Creation timestamp (formatted)
 	UpdatedAt     string      `json:"updated_at"`    // Update timestamp (formatted, optional)
+	DeletedAt     string      `json:"deleted_at"`    // Deletion timestamp (formatted, optional)
 }
 
 type ParkingOrderListRes struct {

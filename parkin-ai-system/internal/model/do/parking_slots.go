@@ -19,4 +19,6 @@ type ParkingSlots struct {
 	SlotType    interface{} //
 	Floor       interface{} //
 	CreatedAt   *gtime.Time //
+	UpdatedAt   *gtime.Time //
+	DeletedAt   *gtime.Time //
 }
