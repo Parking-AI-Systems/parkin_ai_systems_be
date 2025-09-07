@@ -3,16 +3,17 @@ package favourite
 import (
 	"context"
 	"fmt"
-	"parkin-ai-system/internal/consts"
-	"parkin-ai-system/internal/dao"
-	"parkin-ai-system/internal/model/do"
-	"parkin-ai-system/internal/model/entity"
-	"parkin-ai-system/internal/service"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
+
+	"parkin-ai-system/internal/consts"
+	"parkin-ai-system/internal/dao"
+	"parkin-ai-system/internal/model/do"
+	"parkin-ai-system/internal/model/entity"
+	"parkin-ai-system/internal/service"
 )
 
 type sFavorite struct{}
@@ -27,39 +28,40 @@ func init() {
 func (s *sFavorite) FavoriteAdd(ctx context.Context, req *entity.FavoriteAddReq) (*entity.FavoriteAddRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to add a favorite parking lot.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
-	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).One()
+	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the parking lot. Please try again.")
 	}
 	if lot.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Parking lot not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The parking lot could not be found.")
 	}
 
 	count, err := dao.Favorites.Ctx(ctx).
 		Where("user_id", userID).
 		Where("lot_id", req.LotId).
+		Where("deleted_at IS NULL").
 		Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking favorite lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to check favorite parking lots. Please try again later.")
 	}
 	if count > 0 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Parking lot is already in favorites")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "This parking lot is already in your favorites.")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the favorite parking lot. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -74,12 +76,12 @@ func (s *sFavorite) FavoriteAdd(ctx context.Context, req *entity.FavoriteAddReq)
 	}
 	lastId, err := dao.Favorites.Ctx(ctx).TX(tx).Data(data).InsertAndGetId()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error adding favorite lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the favorite parking lot. Please try again later.")
 	}
 
-	adminUsers, err := dao.Users.Ctx(ctx).Where("role", "admin").All()
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", "admin").Where("deleted_at IS NULL").All()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the favorite parking lot. Please try again later.")
 	}
 
 	for _, admin := range adminUsers {
@@ -93,13 +95,13 @@ func (s *sFavorite) FavoriteAdd(ctx context.Context, req *entity.FavoriteAddReq)
 		}
 		_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the favorite parking lot. Please try again later.")
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the favorite parking lot. Please try again later.")
 	}
 
 	return &entity.FavoriteAddRes{Id: lastId}, nil
@@ -108,20 +110,22 @@ func (s *sFavorite) FavoriteAdd(ctx context.Context, req *entity.FavoriteAddReq)
 func (s *sFavorite) FavoriteList(ctx context.Context, req *entity.FavoriteListReq) (*entity.FavoriteListRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view your favorite parking lots.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
 	// Build base query conditions
 	baseQuery := dao.Favorites.Ctx(ctx).
-		LeftJoin("parking_lots", "parking_lots.id = favorites.lot_id")
+		LeftJoin("parking_lots", "parking_lots.id = favorites.lot_id").
+		Where("favorites.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL")
 
 	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 	if !isAdmin {
@@ -135,7 +139,7 @@ func (s *sFavorite) FavoriteList(ctx context.Context, req *entity.FavoriteListRe
 	// Count query - use simple field
 	total, err := baseQuery.Fields("favorites.id").Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error counting favorite lots")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load your favorite parking lots. Please try again later.")
 	}
 
 	if req.Page <= 0 {
@@ -155,7 +159,7 @@ func (s *sFavorite) FavoriteList(ctx context.Context, req *entity.FavoriteListRe
 		Limit(req.PageSize).Offset((req.Page - 1) * req.PageSize).
 		Order("favorites.id DESC").Scan(&favorites)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving favorite lots")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load your favorite parking lots. Please try again later.")
 	}
 
 	list := make([]entity.FavoriteItem, 0, len(favorites))
@@ -180,33 +184,33 @@ func (s *sFavorite) FavoriteList(ctx context.Context, req *entity.FavoriteListRe
 func (s *sFavorite) FavoriteDelete(ctx context.Context, req *entity.FavoriteDeleteReq) (*entity.FavoriteDeleteRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to delete a favorite parking lot.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
-	favorite, err := dao.Favorites.Ctx(ctx).Where("id", req.Id).One()
+	favorite, err := dao.Favorites.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking favorite lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the favorite parking lot. Please try again.")
 	}
 	if favorite.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Favorite lot not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The favorite parking lot could not be found.")
 	}
 
 	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 	if !isAdmin && gconv.Int64(favorite.Map()["user_id"]) != gconv.Int64(userID) {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only delete your own favorite lots or must be an admin")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only remove your own favorite parking lots or must be an admin.")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while removing the favorite parking lot. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -214,14 +218,17 @@ func (s *sFavorite) FavoriteDelete(ctx context.Context, req *entity.FavoriteDele
 		}
 	}()
 
-	_, err = dao.Favorites.Ctx(ctx).TX(tx).Where("id", req.Id).Delete()
+	_, err = dao.Favorites.Ctx(ctx).TX(tx).Data(g.Map{
+		"deleted_at": gtime.Now(),
+		"updated_at": gtime.Now(),
+	}).Where("id", req.Id).Where("deleted_at IS NULL").Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting favorite lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while removing the favorite parking lot. Please try again later.")
 	}
 
-	adminUsers, err := dao.Users.Ctx(ctx).Where("role", "admin").All()
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", "admin").Where("deleted_at IS NULL").All()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while removing the favorite parking lot. Please try again later.")
 	}
 
 	for _, admin := range adminUsers {
@@ -235,14 +242,14 @@ func (s *sFavorite) FavoriteDelete(ctx context.Context, req *entity.FavoriteDele
 		}
 		_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while removing the favorite parking lot. Please try again later.")
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while removing the favorite parking lot. Please try again later.")
 	}
 
-	return &entity.FavoriteDeleteRes{Message: "Favorite lot deleted successfully"}, nil
+	return &entity.FavoriteDeleteRes{Message: "Favorite parking lot removed successfully"}, nil
 }
