@@ -21,6 +21,7 @@ type Users struct {
 	WalletBalance float64     `json:"walletBalance" orm:"wallet_balance" description:""`
 	CreatedAt     *gtime.Time `json:"createdAt"     orm:"created_at"     description:""`
 	UpdatedAt     *gtime.Time `json:"updatedAt"     orm:"updated_at"     description:""`
+	DeletedAt     *gtime.Time `json:"deletedAt"     orm:"deleted_at"     description:""`
 }
 
 type UserRegisterReq struct {
@@ -90,6 +91,7 @@ type UserProfileRes struct {
 	WalletBalance float64 `json:"wallet_balance"`
 	CreatedAt     string  `json:"created_at"`
 	UpdatedAt     string  `json:"updated_at"`
+	DeletedAt     string  `json:"deleted_at"`
 }
 
 type UserByIdReq struct {
@@ -109,6 +111,7 @@ type UserByIdRes struct {
 	WalletBalance float64 `json:"wallet_balance"`
 	CreatedAt     string  `json:"created_at"`
 	UpdatedAt     string  `json:"updated_at"`
+	DeletedAt     string  `json:"deleted_at"`
 }
 
 type UserUpdateProfileReq struct {
@@ -148,6 +151,7 @@ type UserItem struct {
 	WalletBalance float64 `json:"wallet_balance"`
 	CreatedAt     string  `json:"created_at"`
 	UpdatedAt     string  `json:"updated_at"`
+	DeletedAt     string  `json:"deleted_at"`
 }
 
 type UserListRes struct {

@@ -76,6 +76,7 @@ type UserProfileRes struct {
 	WalletBalance float64 `json:"wallet_balance"`
 	CreatedAt     string  `json:"created_at"`
 	UpdatedAt     string  `json:"updated_at"`
+	DeletedAt     string  `json:"deleted_at"`
 }
 
 type UserByIdReq struct {
@@ -96,6 +97,7 @@ type UserByIdRes struct {
 	WalletBalance float64 `json:"wallet_balance"`
 	CreatedAt     string  `json:"created_at"`
 	UpdatedAt     string  `json:"updated_at"`
+	DeletedAt     string  `json:"deleted_at"`
 }
 
 type UserUpdateProfileReq struct {
@@ -137,6 +139,7 @@ type UserItem struct {
 	WalletBalance float64 `json:"wallet_balance"`
 	CreatedAt     string  `json:"created_at"`
 	UpdatedAt     string  `json:"updated_at"`
+	DeletedAt     string  `json:"deleted_at"`
 }
 
 type UserListRes struct {

@@ -272,7 +272,7 @@ func (s *sUser) UserProfile(ctx context.Context, req *entity.UserProfileReq) (re
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
 	}
 
-	userRecord, err := dao.Users.Ctx(ctx).Where("id", userIDStr).One()
+	userRecord, err := dao.Users.Ctx(ctx).Where("id", userIDStr).Where("deleted_at is null").One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving user")
 	}
@@ -404,7 +404,7 @@ func (s *sUser) UserUpdateProfile(ctx context.Context, req *entity.UserUpdatePro
 		data["password_hash"] = hashedPwd
 	}
 
-	_, err = dao.Users.Ctx(ctx).Where("id", userIDStr).Data(data).Update()
+	_, err = dao.Users.Ctx(ctx).Where("id", userIDStr).Where("deleted_at IS NULL").Data(data).Update()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeFailedToUpdate, "Error updating profile")
 	}
@@ -500,7 +500,7 @@ func (s *sUser) DeleteUser(ctx context.Context, req *entity.UserDeleteReq) (res 
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
 	}
 
-	currentUser, err := dao.Users.Ctx(ctx).Where("id", userIDStr).One()
+	currentUser, err := dao.Users.Ctx(ctx).Where("id", userIDStr).Where("deleted_at IS NULL").One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
 	}
@@ -601,7 +601,7 @@ func (s *sUser) UpdateUserRole(ctx context.Context, req *entity.UserUpdateRoleRe
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
 	}
 
-	currentUser, err := dao.Users.Ctx(ctx).Where("id", userIDStr).One()
+	currentUser, err := dao.Users.Ctx(ctx).Where("id", userIDStr).Where("deleted_at IS NULL").One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
 	}
@@ -697,7 +697,7 @@ func (s *sUser) UpdateWalletBalance(ctx context.Context, req *entity.UserUpdateW
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
 	}
 
-	currentUser, err := dao.Users.Ctx(ctx).Where("id", userIDStr).One()
+	currentUser, err := dao.Users.Ctx(ctx).Where("id", userIDStr).Where("deleted_at IS NULL").One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
 	}

@@ -23,4 +23,5 @@ type Users struct {
 	WalletBalance interface{} //
 	CreatedAt     *gtime.Time //
 	UpdatedAt     *gtime.Time //
+	DeletedAt     *gtime.Time //
 }

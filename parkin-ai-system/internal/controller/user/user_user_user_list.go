@@ -47,6 +47,7 @@ func (c *ControllerUser) UserList(ctx context.Context, req *user.UserListReq) (r
 			WalletBalance: item.WalletBalance,
 			CreatedAt:     item.CreatedAt,
 			UpdatedAt:     item.UpdatedAt,
+			DeletedAt:     item.DeletedAt,
 		})
 	}
 	if r := g.RequestFromCtx(ctx); r != nil {

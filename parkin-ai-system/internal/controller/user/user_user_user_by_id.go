@@ -36,6 +36,7 @@ func (c *ControllerUser) UserById(ctx context.Context, req *user.UserByIdReq) (r
 		WalletBalance: userRes.WalletBalance,
 		CreatedAt:     userRes.CreatedAt,
 		UpdatedAt:     userRes.UpdatedAt,
+		DeletedAt:     userRes.DeletedAt,
 	}
 	if r := g.RequestFromCtx(ctx); r != nil {
 		r.Response.WriteJson(res)

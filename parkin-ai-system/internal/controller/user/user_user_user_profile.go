@@ -34,6 +34,7 @@ func (c *ControllerUser) UserProfile(ctx context.Context, req *user.UserProfileR
 		WalletBalance: profileRes.WalletBalance,
 		CreatedAt:     profileRes.CreatedAt,
 		UpdatedAt:     profileRes.UpdatedAt,
+		DeletedAt:     profileRes.DeletedAt,
 	}
 	if r := g.RequestFromCtx(ctx); r != nil {
 		r.Response.WriteJson(res)
