@@ -3,16 +3,17 @@ package parking_slot
 import (
 	"context"
 	"fmt"
-	"parkin-ai-system/internal/consts"
-	"parkin-ai-system/internal/dao"
-	"parkin-ai-system/internal/model/do"
-	"parkin-ai-system/internal/model/entity"
-	"parkin-ai-system/internal/service"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
+
+	"parkin-ai-system/internal/consts"
+	"parkin-ai-system/internal/dao"
+	"parkin-ai-system/internal/model/do"
+	"parkin-ai-system/internal/model/entity"
+	"parkin-ai-system/internal/service"
 )
 
 type sParkingSlot struct{}
@@ -27,34 +28,34 @@ func init() {
 func (s *sParkingSlot) ParkingSlotAdd(ctx context.Context, req *entity.ParkingSlotAddReq) (*entity.ParkingSlotAddRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to add a parking slot.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can add parking slots")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can add parking slots.")
 	}
 
-	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).One()
+	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking lot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the parking lot. Please try again.")
 	}
 	if lot.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeParkingLotNotFound, "Parking lot not found")
+		return nil, gerror.NewCode(consts.CodeParkingLotNotFound, "The parking lot could not be found.")
 	}
 
-	count, err := dao.ParkingSlots.Ctx(ctx).Where("lot_id", req.LotId).Where("code", req.Code).Count()
+	count, err := dao.ParkingSlots.Ctx(ctx).Where("lot_id", req.LotId).Where("code", req.Code).Where("deleted_at IS NULL").Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking slot code uniqueness")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify the slot code. Please try again.")
 	}
 	if count > 0 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Slot code already exists for this parking lot")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "This slot code is already used in the parking lot.")
 	}
 
 	isValidSlotType := false
@@ -65,19 +66,19 @@ func (s *sParkingSlot) ParkingSlotAdd(ctx context.Context, req *entity.ParkingSl
 		}
 	}
 	if !isValidSlotType {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Invalid slot type")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "Please select a valid slot type.")
 	}
 
 	if len(req.Code) > 20 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Slot code must be less than 20 characters")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "The slot code must be 20 characters or fewer.")
 	}
 	if len(req.Floor) > 10 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Floor must be less than 10 characters")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "The floor name must be 10 characters or fewer.")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the parking slot. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -95,12 +96,12 @@ func (s *sParkingSlot) ParkingSlotAdd(ctx context.Context, req *entity.ParkingSl
 	}
 	lastId, err := dao.ParkingSlots.Ctx(ctx).TX(tx).Data(data).InsertAndGetId()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating parking slot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the parking slot. Please try again later.")
 	}
 
-	adminUsers, err := dao.Users.Ctx(ctx).Where("role", "admin").All()
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).Where("deleted_at IS NULL").All()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the parking slot. Please try again later.")
 	}
 
 	for _, admin := range adminUsers {
@@ -114,13 +115,13 @@ func (s *sParkingSlot) ParkingSlotAdd(ctx context.Context, req *entity.ParkingSl
 		}
 		_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the parking slot. Please try again later.")
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while adding the parking slot. Please try again later.")
 	}
 
 	return &entity.ParkingSlotAddRes{Id: lastId}, nil
@@ -129,20 +130,21 @@ func (s *sParkingSlot) ParkingSlotAdd(ctx context.Context, req *entity.ParkingSl
 func (s *sParkingSlot) ParkingSlotList(ctx context.Context, req *entity.ParkingSlotListReq) (*entity.ParkingSlotListRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view parking slots.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
-	// Build base query conditions
 	baseQuery := dao.ParkingSlots.Ctx(ctx).
-		LeftJoin("parking_lots", "parking_lots.id = parking_slots.lot_id")
+		LeftJoin("parking_lots", "parking_lots.id = parking_slots.lot_id").
+		Where("parking_slots.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL OR parking_lots.id IS NULL")
 
 	if req.LotId != 0 {
 		baseQuery = baseQuery.Where("parking_slots.lot_id", req.LotId)
@@ -154,10 +156,9 @@ func (s *sParkingSlot) ParkingSlotList(ctx context.Context, req *entity.ParkingS
 		baseQuery = baseQuery.Where("parking_slots.slot_type", req.SlotType)
 	}
 
-	// Count query - use simple field
 	total, err := baseQuery.Fields("parking_slots.id").Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error counting parking slots")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load parking slots. Please try again later.")
 	}
 
 	if req.Page <= 0 {
@@ -167,7 +168,6 @@ func (s *sParkingSlot) ParkingSlotList(ctx context.Context, req *entity.ParkingS
 		req.PageSize = 10
 	}
 
-	// Data query - use joined fields
 	var slots []struct {
 		entity.ParkingSlots
 		LotName string `json:"lot_name"`
@@ -176,7 +176,7 @@ func (s *sParkingSlot) ParkingSlotList(ctx context.Context, req *entity.ParkingS
 		Limit(req.PageSize).Offset((req.Page - 1) * req.PageSize).
 		Order("parking_slots.id DESC").Scan(&slots)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving parking slots")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load parking slots. Please try again later.")
 	}
 
 	list := make([]entity.ParkingSlotItem, 0, len(slots))
@@ -203,15 +203,15 @@ func (s *sParkingSlot) ParkingSlotList(ctx context.Context, req *entity.ParkingS
 func (s *sParkingSlot) ParkingSlotGet(ctx context.Context, req *entity.ParkingSlotGetReq) (*entity.ParkingSlotItem, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to view the parking slot.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 
 	var slot struct {
@@ -222,12 +222,14 @@ func (s *sParkingSlot) ParkingSlotGet(ctx context.Context, req *entity.ParkingSl
 		Fields("parking_slots.*, parking_lots.name as lot_name").
 		LeftJoin("parking_lots", "parking_lots.id = parking_slots.lot_id").
 		Where("parking_slots.id", req.Id).
+		Where("parking_slots.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL OR parking_lots.id IS NULL").
 		Scan(&slot)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving parking slot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to load the parking slot. Please try again later.")
 	}
 	if slot.Id == 0 {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Parking slot not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The parking slot could not be found.")
 	}
 
 	item := entity.ParkingSlotItem{
@@ -247,35 +249,35 @@ func (s *sParkingSlot) ParkingSlotGet(ctx context.Context, req *entity.ParkingSl
 func (s *sParkingSlot) ParkingSlotUpdate(ctx context.Context, req *entity.ParkingSlotUpdateReq) (*entity.ParkingSlotItem, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to update the parking slot.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can update parking slots")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can update parking slots.")
 	}
 
-	slot, err := dao.ParkingSlots.Ctx(ctx).Where("id", req.Id).One()
+	slot, err := dao.ParkingSlots.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking slot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the parking slot. Please try again.")
 	}
 	if slot.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Parking slot not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The parking slot could not be found.")
 	}
 
 	if req.LotId != 0 {
-		lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).One()
+		lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).Where("deleted_at IS NULL").One()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking lot")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the parking lot. Please try again.")
 		}
 		if lot.IsEmpty() {
-			return nil, gerror.NewCode(consts.CodeParkingLotNotFound, "Parking lot not found")
+			return nil, gerror.NewCode(consts.CodeParkingLotNotFound, "The parking lot could not be found.")
 		}
 	}
 
@@ -284,12 +286,13 @@ func (s *sParkingSlot) ParkingSlotUpdate(ctx context.Context, req *entity.Parkin
 			Where("lot_id", req.LotId).
 			Where("code", req.Code).
 			Where("id != ?", req.Id).
+			Where("deleted_at IS NULL").
 			Count()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking slot code uniqueness")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify the slot code. Please try again.")
 		}
 		if count > 0 {
-			return nil, gerror.NewCode(consts.CodeInvalidInput, "Slot code already exists for this parking lot")
+			return nil, gerror.NewCode(consts.CodeInvalidInput, "This slot code is already used in the parking lot.")
 		}
 	}
 
@@ -302,20 +305,20 @@ func (s *sParkingSlot) ParkingSlotUpdate(ctx context.Context, req *entity.Parkin
 			}
 		}
 		if !isValidSlotType {
-			return nil, gerror.NewCode(consts.CodeInvalidInput, "Invalid slot type")
+			return nil, gerror.NewCode(consts.CodeInvalidInput, "Please select a valid slot type.")
 		}
 	}
 
 	if req.Code != "" && len(req.Code) > 20 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Slot code must be less than 20 characters")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "The slot code must be 20 characters or fewer.")
 	}
 	if req.Floor != "" && len(req.Floor) > 10 {
-		return nil, gerror.NewCode(consts.CodeInvalidInput, "Floor must be less than 10 characters")
+		return nil, gerror.NewCode(consts.CodeInvalidInput, "The floor name must be 10 characters or fewer.")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the parking slot. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -323,7 +326,9 @@ func (s *sParkingSlot) ParkingSlotUpdate(ctx context.Context, req *entity.Parkin
 		}
 	}()
 
-	updateData := g.Map{}
+	updateData := g.Map{
+		"updated_at": gtime.Now(),
+	}
 	if req.LotId != 0 {
 		updateData["lot_id"] = req.LotId
 	}
@@ -340,14 +345,14 @@ func (s *sParkingSlot) ParkingSlotUpdate(ctx context.Context, req *entity.Parkin
 		updateData["floor"] = req.Floor
 	}
 
-	_, err = dao.ParkingSlots.Ctx(ctx).TX(tx).Data(updateData).Where("id", req.Id).Update()
+	_, err = dao.ParkingSlots.Ctx(ctx).TX(tx).Data(updateData).Where("id", req.Id).Where("deleted_at IS NULL").Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating parking slot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the parking slot. Please try again later.")
 	}
 
-	adminUsers, err := dao.Users.Ctx(ctx).Where("role", "admin").All()
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).Where("deleted_at IS NULL").All()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the parking slot. Please try again later.")
 	}
 
 	for _, admin := range adminUsers {
@@ -361,13 +366,13 @@ func (s *sParkingSlot) ParkingSlotUpdate(ctx context.Context, req *entity.Parkin
 		}
 		_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the parking slot. Please try again later.")
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the parking slot. Please try again later.")
 	}
 
 	var updatedSlot struct {
@@ -378,9 +383,11 @@ func (s *sParkingSlot) ParkingSlotUpdate(ctx context.Context, req *entity.Parkin
 		Fields("parking_slots.*, parking_lots.name as lot_name").
 		LeftJoin("parking_lots", "parking_lots.id = parking_slots.lot_id").
 		Where("parking_slots.id", req.Id).
+		Where("parking_slots.deleted_at IS NULL").
+		Where("parking_lots.deleted_at IS NULL OR parking_lots.id IS NULL").
 		Scan(&updatedSlot)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving updated parking slot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while updating the parking slot. Please try again later.")
 	}
 
 	item := entity.ParkingSlotItem{
@@ -400,42 +407,43 @@ func (s *sParkingSlot) ParkingSlotUpdate(ctx context.Context, req *entity.Parkin
 func (s *sParkingSlot) ParkingSlotDelete(ctx context.Context, req *entity.ParkingSlotDeleteReq) (*entity.ParkingSlotDeleteRes, error) {
 	userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
 	if userID == "" {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Please log in to delete the parking slot.")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to verify your account. Please try again later.")
 	}
 	if user.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
+		return nil, gerror.NewCode(consts.CodeUserNotFound, "Your account could not be found. Please contact support.")
 	}
 	if gconv.String(user.Map()["role"]) != consts.RoleAdmin {
-		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can delete parking slots")
+		return nil, gerror.NewCode(consts.CodeUnauthorized, "Only admins can delete parking slots.")
 	}
 
-	slot, err := dao.ParkingSlots.Ctx(ctx).Where("id", req.Id).One()
+	slot, err := dao.ParkingSlots.Ctx(ctx).Where("id", req.Id).Where("deleted_at IS NULL").One()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking slot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to find the parking slot. Please try again.")
 	}
 	if slot.IsEmpty() {
-		return nil, gerror.NewCode(consts.CodeNotFound, "Parking slot not found")
+		return nil, gerror.NewCode(consts.CodeNotFound, "The parking slot could not be found.")
 	}
 
 	count, err := dao.ParkingOrders.Ctx(ctx).
 		Where("slot_id", req.Id).
-		Where("status NOT IN (?)", g.Slice{"completed", "cancelled"}).
+		Where("status NOT IN (?)", g.Slice{"completed", "canceled"}).
+		Where("deleted_at IS NULL").
 		Count()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking active orders")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Unable to check for active bookings. Please try again.")
 	}
 	if count > 0 {
-		return nil, gerror.NewCode(consts.CodeInvalidOperation, "Cannot delete parking slot with active orders")
+		return nil, gerror.NewCode(consts.CodeInvalidOperation, "This parking slot cannot be deleted because it has active bookings.")
 	}
 
 	tx, err := g.DB().Begin(ctx)
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error starting transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the parking slot. Please try again later.")
 	}
 	defer func() {
 		if err != nil {
@@ -443,14 +451,17 @@ func (s *sParkingSlot) ParkingSlotDelete(ctx context.Context, req *entity.Parkin
 		}
 	}()
 
-	_, err = dao.ParkingSlots.Ctx(ctx).TX(tx).Where("id", req.Id).Delete()
+	_, err = dao.ParkingSlots.Ctx(ctx).TX(tx).Data(g.Map{
+		"deleted_at": gtime.Now(),
+		"updated_at": gtime.Now(),
+	}).Where("id", req.Id).Where("deleted_at IS NULL").Update()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting parking slot")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the parking slot. Please try again later.")
 	}
 
-	adminUsers, err := dao.Users.Ctx(ctx).Where("role", "admin").All()
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).Where("deleted_at IS NULL").All()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the parking slot. Please try again later.")
 	}
 
 	for _, admin := range adminUsers {
@@ -464,13 +475,13 @@ func (s *sParkingSlot) ParkingSlotDelete(ctx context.Context, req *entity.Parkin
 		}
 		_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(notiData).Insert()
 		if err != nil {
-			return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating notification")
+			return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the parking slot. Please try again later.")
 		}
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error committing transaction")
+		return nil, gerror.NewCode(consts.CodeDatabaseError, "Something went wrong while deleting the parking slot. Please try again later.")
 	}
 
 	return &entity.ParkingSlotDeleteRes{Message: "Parking slot deleted successfully"}, nil
