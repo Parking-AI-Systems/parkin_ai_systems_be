@@ -18,6 +18,8 @@ type Vehicles struct {
 	Color        string      `json:"color"        orm:"color"         description:""`
 	Type         string      `json:"type"         orm:"type"          description:""`
 	CreatedAt    *gtime.Time `json:"createdAt"    orm:"created_at"    description:""`
+	UpdatedAt    *gtime.Time `json:"updatedAt"    orm:"updated_at"    description:""`
+	DeletedAt    *gtime.Time `json:"deletedAt"    orm:"deleted_at"    description:""`
 }
 type VehicleAddReq struct {
 	LicensePlate string `json:"licensePlate"`
@@ -47,6 +49,8 @@ type VehicleItem struct {
 	Color        string `json:"color"`
 	Type         string `json:"type"`
 	CreatedAt    string `json:"created_at"`
+	UpdatedAt    string `json:"updated_at"`
+	DeletedAt    string `json:"deleted_at"`
 }
 
 type VehicleListRes struct {

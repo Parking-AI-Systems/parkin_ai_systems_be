@@ -102,7 +102,7 @@ func (s *sVehicle) VehicleAdd(ctx context.Context, req *entity.VehicleAddReq) (*
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error creating vehicle")
 	}
 
-	adminUsers, err := dao.Users.Ctx(ctx).Where("role", "admin").All()
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).All()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
 	}
@@ -145,9 +145,10 @@ func (s *sVehicle) VehicleList(ctx context.Context, req *entity.VehicleListReq) 
 	}
 
 	m := dao.Vehicles.Ctx(ctx).
-		LeftJoin("users", "users.id = vehicles.user_id")
+		LeftJoin("users", "users.id = vehicles.user_id").
+		Where("vehicles.deleted_at IS NULL")
 
-	isAdmin := gconv.String(user.Map()["role"]) == "role_admin"
+	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 	if !isAdmin {
 		m = m.Where("vehicles.user_id", userID)
 	}
@@ -250,6 +251,7 @@ func (s *sVehicle) VehicleGet(ctx context.Context, req *entity.VehicleGetReq) (*
 		Fields("vehicles.*, users.username as username").
 		LeftJoin("users", "users.id = vehicles.user_id").
 		Where("vehicles.id", req.Id).
+		Where("vehicles.deleted_at IS NULL").
 		Scan(&vehicle)
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving vehicle")
@@ -258,7 +260,7 @@ func (s *sVehicle) VehicleGet(ctx context.Context, req *entity.VehicleGetReq) (*
 		return nil, gerror.NewCode(consts.CodeNotFound, "Vehicle not found")
 	}
 
-	isAdmin := gconv.String(user.Map()["role"]) == "admin"
+	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 	if !isAdmin && vehicle.UserId != gconv.Int64(userID) {
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only view your own vehicles or must be an admin")
 	}
@@ -292,7 +294,7 @@ func (s *sVehicle) VehicleUpdate(ctx context.Context, req *entity.VehicleUpdateR
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
 
-	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", req.Id).One()
+	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", req.Id).Where("deleted_at is NULL").One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking vehicle")
 	}
@@ -300,7 +302,7 @@ func (s *sVehicle) VehicleUpdate(ctx context.Context, req *entity.VehicleUpdateR
 		return nil, gerror.NewCode(consts.CodeNotFound, "Vehicle not found")
 	}
 
-	isAdmin := gconv.String(user.Map()["role"]) == "admin"
+	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 	if !isAdmin && gconv.Int64(vehicle.Map()["user_id"]) != gconv.Int64(userID) {
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only update your own vehicles or must be an admin")
 	}
@@ -373,13 +375,13 @@ func (s *sVehicle) VehicleUpdate(ctx context.Context, req *entity.VehicleUpdateR
 	if req.Type != "" {
 		updateData["type"] = req.Type
 	}
-
+	updateData["updated_at"] = gtime.Now()
 	_, err = dao.Vehicles.Ctx(ctx).TX(tx).Data(updateData).Where("id", req.Id).Update()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error updating vehicle")
 	}
 
-	adminUsers, err := dao.Users.Ctx(ctx).Where("role", "admin").All()
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).All()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
 	}
@@ -427,6 +429,8 @@ func (s *sVehicle) VehicleUpdate(ctx context.Context, req *entity.VehicleUpdateR
 		Color:        updatedVehicle.Color,
 		Type:         updatedVehicle.Type,
 		CreatedAt:    updatedVehicle.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt:    updatedVehicle.UpdatedAt.Format("2006-01-02 15:04:05"),
+		DeletedAt:    updatedVehicle.DeletedAt.Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil
@@ -446,7 +450,7 @@ func (s *sVehicle) VehicleDelete(ctx context.Context, req *entity.VehicleDeleteR
 		return nil, gerror.NewCode(consts.CodeUserNotFound, "User not found")
 	}
 
-	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", req.Id).One()
+	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", req.Id).Where("deleted_at is NULL").One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking vehicle")
 	}
@@ -454,7 +458,7 @@ func (s *sVehicle) VehicleDelete(ctx context.Context, req *entity.VehicleDeleteR
 		return nil, gerror.NewCode(consts.CodeNotFound, "Vehicle not found")
 	}
 
-	isAdmin := gconv.String(user.Map()["role"]) == "admin"
+	isAdmin := gconv.String(user.Map()["role"]) == consts.RoleAdmin
 	if !isAdmin && gconv.Int64(vehicle.Map()["user_id"]) != gconv.Int64(userID) {
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "You can only delete your own vehicles or must be an admin")
 	}
@@ -480,12 +484,13 @@ func (s *sVehicle) VehicleDelete(ctx context.Context, req *entity.VehicleDeleteR
 		}
 	}()
 
-	_, err = dao.Vehicles.Ctx(ctx).TX(tx).Where("id", req.Id).Delete()
+	_, err = dao.Vehicles.Ctx(ctx).TX(tx).Data(g.Map{
+		"deleted_at": gtime.Now(),
+	}).Where("id", req.Id).Update()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error deleting vehicle")
 	}
-
-	adminUsers, err := dao.Users.Ctx(ctx).Where("role", "admin").All()
+	adminUsers, err := dao.Users.Ctx(ctx).Where("role", consts.RoleAdmin).All()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error retrieving admins")
 	}
