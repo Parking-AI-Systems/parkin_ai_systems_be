@@ -34,7 +34,7 @@ func (s *sVehicle) VehicleAdd(ctx context.Context, req *entity.VehicleAddReq) (*
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
 	}
@@ -136,7 +136,7 @@ func (s *sVehicle) VehicleList(ctx context.Context, req *entity.VehicleListReq) 
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
 	}
@@ -235,7 +235,7 @@ func (s *sVehicle) VehicleGet(ctx context.Context, req *entity.VehicleGetReq) (*
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
 	}
@@ -286,7 +286,7 @@ func (s *sVehicle) VehicleUpdate(ctx context.Context, req *entity.VehicleUpdateR
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
 	}
@@ -442,7 +442,7 @@ func (s *sVehicle) VehicleDelete(ctx context.Context, req *entity.VehicleDeleteR
 		return nil, gerror.NewCode(consts.CodeUnauthorized, "User not authenticated")
 	}
 
-	user, err := dao.Users.Ctx(ctx).Where("id", userID).One()
+	user, err := dao.Users.Ctx(ctx).Where("id", userID).Where("deleted_at IS NULL").One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking user")
 	}
@@ -520,7 +520,7 @@ func (s *sVehicle) VehicleDelete(ctx context.Context, req *entity.VehicleDeleteR
 
 // CheckVehicleSlotCompatibility checks if a vehicle type is compatible with a parking slot type
 func (s *sVehicle) CheckVehicleSlotCompatibility(ctx context.Context, vehicleID, slotID int64) error {
-	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", vehicleID).One()
+	vehicle, err := dao.Vehicles.Ctx(ctx).Where("id", vehicleID).Where("deleted_at IS NULL").One()
 	if err != nil {
 		return gerror.NewCode(consts.CodeDatabaseError, "Error checking vehicle")
 	}

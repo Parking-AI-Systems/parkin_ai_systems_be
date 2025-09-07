@@ -46,7 +46,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderAddWithUser(ctx context.Context,
 		return nil, gerror.NewCode(consts.CodeVehicleNotFound, "Vehicle not found")
 	}
 
-	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).One()
+	lot, err := dao.ParkingLots.Ctx(ctx).Where("id", req.LotId).Where("deleted_at is NULL").One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking parking lot")
 	}
@@ -54,7 +54,7 @@ func (s *sOthersServiceOrder) OthersServiceOrderAddWithUser(ctx context.Context,
 		return nil, gerror.NewCode(consts.CodeParkingLotNotFound, "Parking lot not found")
 	}
 
-	service, err := dao.OthersService.Ctx(ctx).Where("id", req.ServiceId).One()
+	service, err := dao.OthersService.Ctx(ctx).Where("id", req.ServiceId).Where("deleted_at is NULL").One()
 	if err != nil {
 		return nil, gerror.NewCode(consts.CodeDatabaseError, "Error checking service")
 	}
