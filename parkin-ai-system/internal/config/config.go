@@ -49,6 +49,7 @@ type DatabaseConfig struct {
 		MaxIdle     string `yaml:"maxIdle"`
 		MaxOpen     string `yaml:"maxOpen"`
 		MaxLifetime string `yaml:"maxLifetime"`
+		MaxIdleTime string `yaml:"maxIdleTime"`
 	} `yaml:"default"`
 }
 
