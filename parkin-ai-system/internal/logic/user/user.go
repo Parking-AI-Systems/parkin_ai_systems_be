@@ -454,9 +454,20 @@ func (s *sUser) GetAllUsers(ctx context.Context, req *entity.UserListReq) (res *
 	}
 	offset := (req.Page - 1) * req.PageSize
 
-	users, err := dao.Users.Ctx(ctx).
+	// Apply the same filters to the main query
+	userQuery := dao.Users.Ctx(ctx).Where("deleted_at IS NULL")
+	if req.Username != "" {
+		userQuery = userQuery.WhereLike("username", "%"+req.Username+"%")
+	}
+	if req.Email != "" {
+		userQuery = userQuery.WhereLike("email", "%"+req.Email+"%")
+	}
+	if req.Role != "" {
+		userQuery = userQuery.Where("role", req.Role)
+	}
+
+	users, err := userQuery.
 		Fields("id", "username", "email", "phone", "full_name", "gender", "birth_date", "role", "avatar_url", "wallet_balance", "created_at", "updated_at").
-		Where("deleted_at IS NULL").
 		Offset(offset).
 		Limit(req.PageSize).
 		Order("created_at DESC").
