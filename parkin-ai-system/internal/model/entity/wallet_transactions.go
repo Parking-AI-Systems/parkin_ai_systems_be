@@ -67,3 +67,11 @@ type WalletTransactionGetReq struct {
 type WalletTransactionGetRes struct {
 	Transaction WalletTransactionItem `json:"transaction"`
 }
+type GetMyLotTransactionReq struct {
+	Page     int `json:"page"`
+	PageSize int `json:"pageSize"`
+}
+type GetMyLotTransactionRes struct {	
+	List  []WalletTransactionItem `json:"list"`	
+	Total int                     `json:"total"`	
+}

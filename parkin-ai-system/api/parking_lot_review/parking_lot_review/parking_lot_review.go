@@ -66,3 +66,14 @@ type ParkingLotReviewDeleteReq struct {
 type ParkingLotReviewDeleteRes struct {
 	Message string `json:"message"`
 }
+
+type MyParkingLotReviewListReq struct {
+	g.Meta   `path:"/my-parking-lot-reviews" tags:"Parking Lot Review" method:"GET" summary:"List my reviews" description:"Retrieves a paginated list of reviews submitted by the authenticated user with optional filters." middleware:"middleware.Auth"`
+	LotId    int64 `json:"lot_id" v:"min:0#Parking lot ID must be non-negative"`
+	Page     int   `json:"page" v:"min:1#Page must be at least 1"`
+	PageSize int   `json:"page_size" v:"min:1|max:100#Page size must be between 1 and 100"`
+}
+type MyParkingLotReviewListRes struct {
+	List  []ParkingLotReviewItem `json:"list"`
+	Total int                    `json:"total"`
+}

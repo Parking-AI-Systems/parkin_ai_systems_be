@@ -344,3 +344,7 @@ func (s *sWalletTransaction) WalletTransactionGet(ctx context.Context, req *enti
 
 	return &item, nil
 }
+
+func (s *sWalletTransaction) GetMyLotTransaction(ctx context.Context, req *entity.GetMyLotTransactionReq) (*entity.GetMyLotTransactionRes, error) {
+	return nil, nil
+}

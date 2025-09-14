@@ -16,4 +16,5 @@ type IParkingLotReviewParking_lot_review interface {
 	ParkingLotReviewGet(ctx context.Context, req *parking_lot_review.ParkingLotReviewGetReq) (res *parking_lot_review.ParkingLotReviewGetRes, err error)
 	ParkingLotReviewUpdate(ctx context.Context, req *parking_lot_review.ParkingLotReviewUpdateReq) (res *parking_lot_review.ParkingLotReviewUpdateRes, err error)
 	ParkingLotReviewDelete(ctx context.Context, req *parking_lot_review.ParkingLotReviewDeleteReq) (res *parking_lot_review.ParkingLotReviewDeleteRes, err error)
+	MyParkingLotReviewList(ctx context.Context, req *parking_lot_review.MyParkingLotReviewListReq) (res *parking_lot_review.MyParkingLotReviewListRes, err error)
 }

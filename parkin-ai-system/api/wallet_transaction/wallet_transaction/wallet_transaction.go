@@ -49,3 +49,11 @@ type WalletTransactionGetReq struct {
 type WalletTransactionGetRes struct {
 	Transaction WalletTransactionItem `json:"transaction"`
 }
+
+type MyWalletTransactionGetReq struct {
+	g.Meta `path:"/wallet-transactions/:id" tags:"Wallet Transaction" method:"GET" summary:"Get wallet transaction details" description:"Retrieves details of a specific wallet transaction by ID." middleware:"middleware.Auth"`
+	Id     int64 `json:"id" v:"required|min:1#Transaction ID is required|Transaction ID must be positive"`
+}
+type MyWalletTransactionGetRes struct {
+	Transaction WalletTransactionItem `json:"transaction"`
+}

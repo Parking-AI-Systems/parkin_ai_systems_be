@@ -164,3 +164,16 @@ type ParkingOrderStatusItem struct {
 	Status string `json:"status"` // Order status (pending, confirmed, canceled, completed)
 	Count  int64  `json:"count"`  // Number of orders with this status
 }
+
+type MyParkingLotOrderListReq struct {
+	g.Meta   `path:"/my/parking-orders" tags:"My Parking Orders" method:"GET" summary:"List my parking orders" description:"Retrieves a paginated list of parking orders for the authenticated user with optional filters for lot and status." middleware:"middleware.Auth"`
+	LotId    int64  `json:"lot_id" v:"min:0#Parking lot ID must be non-negative"`                    // Filter by parking lot ID (optional, 0 means no filter)
+	Page     int    `json:"page" v:"min:1#Page must be at least 1"`                                  // Page number for pagination
+	PageSize int    `json:"page_size" v:"min:1|max:100#Page size must be between 1 and 100"`         // Number of items per page
+	Status   string `json:"status" v:"in:pending,confirmed,canceled,completed#Invalid status value"` // Filter by order status (optional)
+
+}
+type MyParkingLotOrderListRes struct {
+	List  []ParkingOrderItem `json:"list"`  // List of parking orders
+	Total int                `json:"total"` // Total number of matching orders
+}

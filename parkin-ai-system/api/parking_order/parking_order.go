@@ -21,4 +21,5 @@ type IParkingOrderParking_order interface {
 	ParkingOrderRevenue(ctx context.Context, req *parking_order.ParkingOrderRevenueReq) (res *parking_order.ParkingOrderRevenueRes, err error)
 	ParkingOrderTrends(ctx context.Context, req *parking_order.ParkingOrderTrendsReq) (res *parking_order.ParkingOrderTrendsRes, err error)
 	ParkingOrderStatusBreakdown(ctx context.Context, req *parking_order.ParkingOrderStatusBreakdownReq) (res *parking_order.ParkingOrderStatusBreakdownRes, err error)
+	MyParkingLotOrderList(ctx context.Context, req *parking_order.MyParkingLotOrderListReq) (res *parking_order.MyParkingLotOrderListRes, err error)
 }

@@ -1056,3 +1056,7 @@ func (s *sParkingOrder) getTrendsConfig(period string, start, end *gtime.Time) (
 		}
 	}
 }
+
+func (s *sParkingOrder) GetMyLotOrder(ctx context.Context, req *entity.GetMyLotOrderReq) (*entity.GetMyLotOrderRes, error) {
+	return nil, nil
+}

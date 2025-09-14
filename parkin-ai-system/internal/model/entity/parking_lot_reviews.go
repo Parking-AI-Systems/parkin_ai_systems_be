@@ -80,3 +80,11 @@ type ParkingLotReviewDeleteReq struct {
 type ParkingLotReviewDeleteRes struct {
 	Message string `json:"message"`
 }
+type MyParkingLotReviewReq struct {
+	Page     int `json:"page"`
+	PageSize int `json:"pageSize"`
+}
+type MyParkingLotReviewRes struct {
+	List  []ParkingLotReviewItem `json:"list"`
+	Total int                    `json:"total"`
+}

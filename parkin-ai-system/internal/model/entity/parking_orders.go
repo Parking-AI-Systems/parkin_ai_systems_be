@@ -136,3 +136,12 @@ type ParkingOrderStatusItem struct {
 	Status string `json:"status"`
 	Count  int64  `json:"count"`
 }
+
+type GetMyLotOrderReq struct {
+	Page     int `json:"page"`
+	PageSize int `json:"pageSize"`
+}
+type GetMyLotOrderRes struct {
+	List  []ParkingOrderItem `json:"list"`
+	Total int                `json:"total"`
+}

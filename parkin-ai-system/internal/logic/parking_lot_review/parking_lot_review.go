@@ -464,3 +464,7 @@ func (s *sParkingLotReview) ParkingLotReviewDelete(ctx context.Context, req *ent
 
 	return &entity.ParkingLotReviewDeleteRes{Message: "Review deleted successfully"}, nil
 }
+func (s *sParkingLotReview) GetMyLotReview(ctx context.Context, req *entity.MyParkingLotReviewReq) (*entity.MyParkingLotReviewRes, error) {
+	// userID := g.RequestFromCtx(ctx).GetCtxVar("user_id").String()
+	return nil, nil
+}

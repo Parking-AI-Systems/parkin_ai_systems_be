@@ -22,6 +22,7 @@ type (
 		ParkingOrderRevenue(ctx context.Context, req *entity.ParkingOrderRevenueReq) (*entity.ParkingOrderRevenueRes, error)
 		ParkingOrderTrends(ctx context.Context, req *entity.ParkingOrderTrendsReq) (*entity.ParkingOrderTrendsRes, error)
 		ParkingOrderStatusBreakdown(ctx context.Context, req *entity.ParkingOrderStatusBreakdownReq) (*entity.ParkingOrderStatusBreakdownRes, error)
+		GetMyLotOrder(ctx context.Context, req *entity.GetMyLotOrderReq) (*entity.GetMyLotOrderRes, error)
 	}
 )
 

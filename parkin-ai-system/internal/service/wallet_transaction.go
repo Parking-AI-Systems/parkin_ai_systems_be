@@ -15,6 +15,7 @@ type (
 		WalletTransactionAdd(ctx context.Context, req *entity.WalletTransactionAddReq) (*entity.WalletTransactionAddRes, error)
 		WalletTransactionList(ctx context.Context, req *entity.WalletTransactionListReq) (*entity.WalletTransactionListRes, error)
 		WalletTransactionGet(ctx context.Context, req *entity.WalletTransactionGetReq) (*entity.WalletTransactionItem, error)
+		GetMyLotTransaction(ctx context.Context, req *entity.GetMyLotTransactionReq) (*entity.GetMyLotTransactionRes, error)
 	}
 )
 

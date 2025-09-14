@@ -17,6 +17,7 @@ type (
 		ParkingLotReviewGet(ctx context.Context, req *entity.ParkingLotReviewGetReq) (*entity.ParkingLotReviewItem, error)
 		ParkingLotReviewUpdate(ctx context.Context, req *entity.ParkingLotReviewUpdateReq) (*entity.ParkingLotReviewItem, error)
 		ParkingLotReviewDelete(ctx context.Context, req *entity.ParkingLotReviewDeleteReq) (*entity.ParkingLotReviewDeleteRes, error)
+		GetMyLotReview(ctx context.Context, req *entity.MyParkingLotReviewReq) (*entity.MyParkingLotReviewRes, error)
 	}
 )
 
