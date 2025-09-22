@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/payOSHQ/payos-lib-golang"
 
 	"parkin-ai-system/api/payment/payment"
@@ -13,6 +14,10 @@ import (
 func (c *ControllerPayment) Webhook(ctx context.Context, req *payment.WebhookReq) (res *payment.WebhookRes, err error) {
 	// Validate request
 	if req.Signature == "" {
+		if r := g.RequestFromCtx(ctx); r != nil {
+			r.Response.WriteJson(g.Map{"error": "Webhook signature is required"})
+			return nil, nil
+		}
 		return nil, gerror.New("Webhook signature is required")
 	}
 
@@ -50,10 +55,17 @@ func (c *ControllerPayment) Webhook(ctx context.Context, req *payment.WebhookReq
 	// Call service to handle webhook
 	err = service.Payment().HandlePaymentWebhook(ctx, webhookData)
 	if err != nil {
+		if r := g.RequestFromCtx(ctx); r != nil {
+			r.Response.WriteJson(g.Map{"error": err.Error()})
+			return nil, nil
+		}
 		return nil, err
 	}
 
-	return &payment.WebhookRes{
-		Message: "Webhook processed successfully",
-	}, nil
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(&payment.WebhookRes{
+			Message: "Webhook processed successfully",
+		})
+	}
+	return nil, nil
 }

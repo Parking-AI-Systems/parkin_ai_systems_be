@@ -19,9 +19,11 @@ import (
 	"parkin-ai-system/internal/controller/parking_lot_review"
 	"parkin-ai-system/internal/controller/parking_order"
 	"parkin-ai-system/internal/controller/parking_slot"
+	"parkin-ai-system/internal/controller/payment"
 	"parkin-ai-system/internal/controller/user"
 	"parkin-ai-system/internal/controller/vehicle"
 	"parkin-ai-system/internal/controller/wallet_transaction"
+
 	"parkin-ai-system/internal/middleware"
 
 	_ "parkin-ai-system/internal/logic/favourite"
@@ -32,6 +34,7 @@ import (
 	_ "parkin-ai-system/internal/logic/parking_lot_review"
 	_ "parkin-ai-system/internal/logic/parking_order"
 	_ "parkin-ai-system/internal/logic/parking_slot"
+	_ "parkin-ai-system/internal/logic/payment"
 	_ "parkin-ai-system/internal/logic/user"
 	_ "parkin-ai-system/internal/logic/vehicle"
 	_ "parkin-ai-system/internal/logic/wallet_transaction"
@@ -93,7 +96,7 @@ var (
 			favouriteCtrl := favourite.NewFavourite()
 			parkingSlotCtrl := parking_slot.NewParking_slot()
 			parkingOrderCtrl := parking_order.NewParking_order()
-
+			paymentCtrl := payment.NewPayment()
 			s := g.Server()
 			s.Logger().SetHandlers(glog.HandlerJson)
 			s.Use(CORS, ErrorHandler)
@@ -214,6 +217,12 @@ var (
 					authGroup.Bind(parkingOrderCtrl.ParkingOrderDelete)
 					authGroup.Middleware(LogActionMiddleware("parking_order_payment"))
 					authGroup.Bind(parkingOrderCtrl.ParkingOrderPayment)
+					authGroup.Middleware(LogActionMiddleware("create_payment_link"))
+					authGroup.Bind(paymentCtrl.CreatePaymentLink)
+					authGroup.Middleware(LogActionMiddleware("payment_link_get"))
+					authGroup.Bind(paymentCtrl.PaymentLinkGet)
+					authGroup.Middleware(LogActionMiddleware("payment_refund_add"))
+					authGroup.Bind(paymentCtrl.RefundAdd)
 				})
 
 				group.Group("/", func(userGroup *ghttp.RouterGroup) {

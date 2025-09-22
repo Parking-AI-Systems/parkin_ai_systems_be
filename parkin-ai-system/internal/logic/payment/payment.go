@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gogf/gf/v2/database/gdb"
@@ -20,17 +21,26 @@ import (
 
 type sPayment struct{}
 
+var (
+	paymentInstance *sPayment
+	initOnce        sync.Once
+)
+
 func Init() {
-	cfg := config.GetConfig()
+	initOnce.Do(func() {
+		cfg := config.GetConfig()
 
-	// Khởi tạo PayOS với thông tin cấu hình
-	payos.Key(cfg.PayOs.ClientID, cfg.PayOs.ApiKey, cfg.PayOs.CheckSum)
+		// Khởi tạo PayOS với thông tin cấu hình
+		payos.Key(cfg.PayOs.ClientID, cfg.PayOs.ApiKey, cfg.PayOs.CheckSum)
 
-	service.RegisterPayment(&sPayment{})
+		paymentInstance = &sPayment{}
+		service.RegisterPayment(paymentInstance)
+	})
 }
 
 func init() {
-	Init()
+	// Register a placeholder that will initialize lazily
+	service.RegisterPayment(&sPayment{})
 }
 
 // GenerateNumber tạo order code tự động theo thời gian
@@ -43,6 +53,9 @@ func GenerateNumber() int {
 
 // CheckoutAdd tạo payment request theo API definition
 func (s *sPayment) CheckoutAdd(ctx context.Context, reqInterface interface{}) (interface{}, error) {
+	// Ensure PayOS is initialized
+	Init()
+
 	// Convert interface{} to payos.CheckoutRequestType
 	reqData, ok := reqInterface.(map[string]interface{})
 	if !ok {
@@ -103,6 +116,9 @@ func (s *sPayment) CheckoutAdd(ctx context.Context, reqInterface interface{}) (i
 
 // PaymentLinkGet lấy thông tin payment link từ PayOS
 func (s *sPayment) PaymentLinkGet(ctx context.Context, paymentLinkId string) (interface{}, error) {
+	// Ensure PayOS is initialized
+	Init()
+
 	// Gọi PayOS API để lấy thông tin payment link
 	result, err := payos.GetPaymentLinkInformation(paymentLinkId)
 	if err != nil {
@@ -118,6 +134,9 @@ func (s *sPayment) PaymentLinkGet(ctx context.Context, paymentLinkId string) (in
 
 // RefundAdd tạo refund request (tạm thời trả về thông tin mock vì PayOS library chưa hỗ trợ)
 func (s *sPayment) RefundAdd(ctx context.Context, paymentLinkId string, amount int, reason *string) (interface{}, error) {
+	// Ensure PayOS is initialized
+	Init()
+
 	// PayOS library hiện tại chưa có method refund, nên tạm thời return mock data
 	g.Log().Info(ctx, "Refund request logged",
 		"paymentLinkId", paymentLinkId,
@@ -135,6 +154,9 @@ func (s *sPayment) RefundAdd(ctx context.Context, paymentLinkId string, amount i
 
 // CreatePaymentLink implement interface method
 func (s *sPayment) CreatePaymentLink(ctx context.Context, orderType string, orderID int64) (interface{}, error) {
+	// Ensure PayOS is initialized
+	Init()
+
 	cfg := config.GetConfig()
 
 	var orderCode int64
@@ -168,7 +190,9 @@ func (s *sPayment) CreatePaymentLink(ctx context.Context, orderType string, orde
 		description = fmt.Sprintf("Thanh toán chỗ đậu xe %s - %s",
 			gconv.String(orderMap["lot_name"]),
 			gconv.String(orderMap["slot_code"]))
-
+		if len([]rune(description)) > 25 {
+			description = string([]rune(description)[:25])
+		}
 		items = []entity.Item{
 			{
 				Name:  fmt.Sprintf("Chỗ đậu xe %s", gconv.String(orderMap["slot_code"])),
@@ -204,7 +228,9 @@ func (s *sPayment) CreatePaymentLink(ctx context.Context, orderType string, orde
 		description = fmt.Sprintf("Thanh toán dịch vụ %s tại %s",
 			gconv.String(orderMap["service_name"]),
 			gconv.String(orderMap["lot_name"]))
-
+		if len([]rune(description)) > 25 {
+			description = string([]rune(description)[:25])
+		}
 		items = []entity.Item{
 			{
 				Name:  gconv.String(orderMap["service_name"]),
@@ -266,6 +292,9 @@ func (s *sPayment) CreatePaymentLink(ctx context.Context, orderType string, orde
 
 // HandlePaymentWebhook xử lý webhook từ PayOS
 func (s *sPayment) HandlePaymentWebhook(ctx context.Context, webhookData interface{}) error {
+	// Ensure PayOS is initialized
+	Init()
+
 	// Convert interface{} to payos.WebhookType
 	webhook, ok := webhookData.(payos.WebhookType)
 	if !ok {

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/util/gconv"
 
 	"parkin-ai-system/api/payment/payment"
@@ -13,12 +14,20 @@ import (
 func (c *ControllerPayment) PaymentLinkGet(ctx context.Context, req *payment.PaymentLinkGetReq) (res *payment.PaymentLinkGetRes, err error) {
 	// Validate request
 	if req.Id == "" {
+		if r := g.RequestFromCtx(ctx); r != nil {
+			r.Response.WriteJson(g.Map{"error": "Payment link ID is required"})
+			return nil, nil
+		}
 		return nil, gerror.New("Payment link ID is required")
 	}
 
 	// Call service
 	result, err := service.Payment().PaymentLinkGet(ctx, req.Id)
 	if err != nil {
+		if r := g.RequestFromCtx(ctx); r != nil {
+			r.Response.WriteJson(g.Map{"error": err.Error()})
+			return nil, nil
+		}
 		return nil, err
 	}
 
@@ -86,7 +95,11 @@ func (c *ControllerPayment) PaymentLinkGet(ctx context.Context, req *payment.Pay
 		}
 	}
 
-	return &payment.PaymentLinkGetRes{
+	resJson := &payment.PaymentLinkGetRes{
 		PaymentLink: paymentLink,
-	}, nil
+	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(resJson)
+	}
+	return nil, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/gogf/gf/v2/errors/gerror"
+	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/util/gconv"
 
 	"parkin-ai-system/api/payment/payment"
@@ -25,16 +26,24 @@ func (c *ControllerPayment) CreatePaymentLink(ctx context.Context, req *payment.
 	// Call service
 	result, err := service.Payment().CreatePaymentLink(ctx, req.OrderType, req.OrderID)
 	if err != nil {
+		if r := g.RequestFromCtx(ctx); r != nil {
+			r.Response.WriteJson(g.Map{"error": err.Error()})
+			return nil, nil
+		}
 		return nil, err
 	}
 
 	// Convert result
 	resultMap := gconv.Map(result)
-	return &payment.CreatePaymentLinkRes{
+	resJson := &payment.CreatePaymentLinkRes{
 		PaymentLinkId: gconv.String(resultMap["paymentLinkId"]),
 		CheckoutUrl:   gconv.String(resultMap["checkoutUrl"]),
 		QRCode:        gconv.String(resultMap["qrCode"]),
 		Amount:        gconv.Int(resultMap["amount"]),
 		OrderCode:     gconv.Int64(resultMap["orderCode"]),
-	}, nil
+	}
+	if r := g.RequestFromCtx(ctx); r != nil {
+		r.Response.WriteJson(resJson)
+	}
+	return nil, nil
 }
