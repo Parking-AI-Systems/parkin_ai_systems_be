@@ -5,8 +5,8 @@ type Config struct {
 	Logger   LoggerConfig   `yaml:"logger"`
 	Database DatabaseConfig `yaml:"database"`
 	Auth     AuthConfig     `yaml:"auth"`
+	PayOs    PayOsConfig    `yaml:"payOs"`
 }
-
 type LoggerConfig struct {
 	Path                 string   `yaml:"path"`
 	File                 string   `yaml:"file"`
@@ -57,4 +57,10 @@ type AuthConfig struct {
 	SecretKey                string `yaml:"secretKey"`
 	AccessTokenExpireMinute  int    `yaml:"accessTokenExpireMinute"`
 	RefreshTokenExpireMinute int    `yaml:"refreshTokenExpireMinute"`
+}
+
+type PayOsConfig struct {
+	ClientID string `yaml:"clientID"`
+	ApiKey   string `yaml:"apiKey"`
+	CheckSum string `yaml:"checkSum"`
 }
