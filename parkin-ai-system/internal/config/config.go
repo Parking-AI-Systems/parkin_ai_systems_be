@@ -60,7 +60,9 @@ type AuthConfig struct {
 }
 
 type PayOsConfig struct {
-	ClientID string `yaml:"clientID"`
-	ApiKey   string `yaml:"apiKey"`
-	CheckSum string `yaml:"checkSum"`
+	ClientID     string `yaml:"clientID"`
+	ApiKey       string `yaml:"apiKey"`
+	CheckSum     string `yaml:"checkSum"`
+	ParkinDomain string `yaml:"parkinDomain"`
+	PayOsDomain  string `yaml:"payOsDomain"`
 }

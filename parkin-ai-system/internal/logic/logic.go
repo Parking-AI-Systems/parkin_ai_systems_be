@@ -13,6 +13,7 @@ import (
 	_ "parkin-ai-system/internal/logic/parking_lot_review"
 	_ "parkin-ai-system/internal/logic/parking_order"
 	_ "parkin-ai-system/internal/logic/parking_slot"
+	_ "parkin-ai-system/internal/logic/payment"
 	_ "parkin-ai-system/internal/logic/user"
 	_ "parkin-ai-system/internal/logic/vehicle"
 	_ "parkin-ai-system/internal/logic/wallet_transaction"

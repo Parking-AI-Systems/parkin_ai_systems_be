@@ -121,3 +121,19 @@ type WebhookData struct {
 type WebhookRes struct {
 	Message string `json:"message"` // Response message (e.g., "Webhook processed")
 }
+
+// CreatePaymentLinkReq for creating payment link for orders
+type CreatePaymentLinkReq struct {
+	g.Meta    `path:"/create-payment-link" tags:"Payment" method:"POST" summary:"Create payment link for order" description:"Creates a PayOS payment link for parking or service orders" middleware:"middleware.Auth"`
+	OrderType string `json:"order_type" v:"required|in:parking,service#Order type is required|Order type must be parking or service"`
+	OrderID   int64  `json:"order_id" v:"required|min:1#Order ID is required|Order ID must be positive"`
+}
+
+// CreatePaymentLinkRes for payment link response
+type CreatePaymentLinkRes struct {
+	PaymentLinkId string `json:"paymentLinkId"` // Payment link ID
+	CheckoutUrl   string `json:"checkoutUrl"`   // URL for payment checkout
+	QRCode        string `json:"qrCode"`        // Base64 encoded QR code
+	Amount        int    `json:"amount"`        // Payment amount in VND
+	OrderCode     int64  `json:"orderCode"`     // Order code used in PayOS
+}

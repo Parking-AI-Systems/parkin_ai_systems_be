@@ -15,4 +15,5 @@ type IPaymentPayment interface {
 	PaymentLinkGet(ctx context.Context, req *payment.PaymentLinkGetReq) (res *payment.PaymentLinkGetRes, err error)
 	RefundAdd(ctx context.Context, req *payment.RefundAddReq) (res *payment.RefundAddRes, err error)
 	Webhook(ctx context.Context, req *payment.WebhookReq) (res *payment.WebhookRes, err error)
+	CreatePaymentLink(ctx context.Context, req *payment.CreatePaymentLinkReq) (res *payment.CreatePaymentLinkRes, err error)
 }
