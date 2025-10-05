@@ -65,4 +65,12 @@ type PayOsConfig struct {
 	CheckSum     string `yaml:"checkSum"`
 	ParkinDomain string `yaml:"parkinDomain"`
 	PayOsDomain  string `yaml:"payOsDomain"`
+	// VietQR configuration
+	VietQR VietQRConfig `yaml:"vietqr"`
+}
+
+type VietQRConfig struct {
+	BankID    string `yaml:"bankID"`
+	AccountNo string `yaml:"accountNo"`
+	Template  string `yaml:"template"` // compact, compact2, qr_only, print
 }

@@ -107,9 +107,39 @@ func (s *sPayment) CheckoutAdd(ctx context.Context, reqInterface interface{}) (i
 		return nil, gerror.Wrap(err, "failed to create PayOS payment link")
 	}
 
-	// Tạo QR code link từ checkout URL
-	qrCodeLink := fmt.Sprintf("https://api.qrserver.com/v1/create-qr-code/?size=400x400&format=png&data=%s",
-		url.QueryEscape(result.CheckoutUrl))
+	// Tạo VietQR code cho chuyển khoản ngân hàng từ config
+	cfg := config.GetConfig()
+	vietQRConfig := cfg.PayOs.VietQR
+
+	// Fallback values nếu config trống
+	bankID := vietQRConfig.BankID
+	if bankID == "" {
+		bankID = "970422" // MB Bank default
+	}
+
+	accountNo := vietQRConfig.AccountNo
+	if accountNo == "" {
+		accountNo = "VQRQAEPDT8663" // Default account
+	}
+
+	template := vietQRConfig.Template
+	if template == "" {
+		template = "compact2" // Default template
+	}
+
+	// Debug log để kiểm tra config
+	g.Log().Info(ctx, "VietQR Config",
+		"bankID", bankID,
+		"accountNo", accountNo,
+		"template", template)
+
+	// Tạo VietQR URL với thông tin từ config
+	qrCodeLink := fmt.Sprintf("https://img.vietqr.io/image/%s-%s-%s.jpg?amount=%d&addInfo=%s",
+		bankID,
+		accountNo,
+		template,
+		payosReq.Amount/100, // VietQR sử dụng VND, không phải xu
+		url.QueryEscape(fmt.Sprintf("Thanh toan don hang #%d", payosReq.OrderCode)))
 
 	g.Log().Info(ctx, "PayOS payment link created",
 		"orderCode", payosReq.OrderCode,
@@ -293,9 +323,40 @@ func (s *sPayment) CreatePaymentLink(ctx context.Context, orderType string, orde
 		return nil, gerror.Wrap(err, "failed to create PayOS payment link")
 	}
 
-	// Tạo QR code link từ checkout URL sử dụng QR Server API
-	qrCodeLink := fmt.Sprintf("https://api.qrserver.com/v1/create-qr-code/?size=400x400&format=png&data=%s",
-		url.QueryEscape(result.CheckoutUrl))
+	// Tạo VietQR code cho chuyển khoản ngân hàng từ config
+	vietQRConfig := cfg.PayOs.VietQR
+
+	// Fallback values nếu config trống
+	bankID := vietQRConfig.BankID
+	if bankID == "" {
+		bankID = "970422" // MB Bank default
+	}
+
+	accountNo := vietQRConfig.AccountNo
+	if accountNo == "" {
+		accountNo = "VQRQAEPDT8663" // Default account
+	}
+
+	template := vietQRConfig.Template
+	if template == "" {
+		template = "compact2" // Default template
+	}
+
+	// Debug log để kiểm tra config
+	g.Log().Info(ctx, "VietQR Config",
+		"bankID", bankID,
+		"accountNo", accountNo,
+		"template", template,
+		"orderType", orderType,
+		"orderCode", orderCode)
+
+	// Tạo VietQR URL với thông tin thanh toán
+	qrCodeLink := fmt.Sprintf("https://img.vietqr.io/image/%s-%s-%s.jpg?amount=%d&addInfo=%s",
+		bankID,
+		accountNo,
+		template,
+		amount/100, // VietQR sử dụng VND, không phải xu
+		url.QueryEscape(fmt.Sprintf("Thanh toan %s #%d", orderType, orderCode)))
 
 	g.Log().Info(ctx, "PayOS payment link created",
 		"orderType", orderType,

@@ -43,3 +43,14 @@ auth:
   secretKey: +hd>PywO8jrAnIewJvK7UbU1;*28m
   accessTokenExpireMinute: 60
   refreshTokenExpireMinute: 1440
+
+payOs:
+  clientID: "your-payos-client-id"
+  apiKey: "your-payos-api-key"
+  checkSum: "your-payos-checksum"
+  parkinDomain: "https://your-domain.com"
+  payOsDomain: "https://api-merchant.payos.vn"
+  vietqr:
+    bankID: "970422"  # MB Bank
+    accountNo: "VQRQAEPDT8663"  # Tài khoản nhận tiền
+    template: "compact2"  # compact, compact2, qr_only, print
