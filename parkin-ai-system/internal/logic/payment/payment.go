@@ -3,6 +3,7 @@ package payment
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
 	"sync"
 	"time"
@@ -106,12 +107,23 @@ func (s *sPayment) CheckoutAdd(ctx context.Context, reqInterface interface{}) (i
 		return nil, gerror.Wrap(err, "failed to create PayOS payment link")
 	}
 
+	// Tạo QR code link từ checkout URL
+	qrCodeLink := fmt.Sprintf("https://api.qrserver.com/v1/create-qr-code/?size=400x400&format=png&data=%s",
+		url.QueryEscape(result.CheckoutUrl))
+
 	g.Log().Info(ctx, "PayOS payment link created",
 		"orderCode", payosReq.OrderCode,
 		"paymentLinkId", result.PaymentLinkId,
 		"amount", payosReq.Amount)
 
-	return result, nil
+	// Trả về response với QR code link
+	return map[string]interface{}{
+		"paymentLinkId": result.PaymentLinkId,
+		"checkoutUrl":   result.CheckoutUrl,
+		"qrCode":        qrCodeLink, // QR code image URL
+		"amount":        result.Amount,
+		"orderCode":     result.OrderCode,
+	}, nil
 }
 
 // PaymentLinkGet lấy thông tin payment link từ PayOS
@@ -281,13 +293,24 @@ func (s *sPayment) CreatePaymentLink(ctx context.Context, orderType string, orde
 		return nil, gerror.Wrap(err, "failed to create PayOS payment link")
 	}
 
+	// Tạo QR code link từ checkout URL sử dụng QR Server API
+	qrCodeLink := fmt.Sprintf("https://api.qrserver.com/v1/create-qr-code/?size=400x400&format=png&data=%s",
+		url.QueryEscape(result.CheckoutUrl))
+
 	g.Log().Info(ctx, "PayOS payment link created",
 		"orderType", orderType,
 		"orderID", orderID,
 		"paymentLinkId", result.PaymentLinkId,
 		"amount", amount)
 
-	return result, nil
+	// Trả về response với QR code link thay vì raw QR data
+	return map[string]interface{}{
+		"paymentLinkId": result.PaymentLinkId,
+		"checkoutUrl":   result.CheckoutUrl,
+		"qrCode":        qrCodeLink, // QR code image URL
+		"amount":        amount,
+		"orderCode":     orderCode,
+	}, nil
 }
 
 // HandlePaymentWebhook xử lý webhook từ PayOS
