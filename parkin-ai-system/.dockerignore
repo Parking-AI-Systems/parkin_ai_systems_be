@@ -1,0 +1,48 @@
+# Git
+.git
+.gitignore
+README.md
+
+# CI/CD
+.github/
+ci-cd/
+Jenkinsfile*
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+log/
+
+# Test files
+*_test.go
+test/
+
+# Temporary files
+*.tmp
+*.temp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go
+vendor/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.prof
+
+# Build artifacts
+dist/
+build/
+
+# Docker
+Dockerfile*
+docker-compose*
