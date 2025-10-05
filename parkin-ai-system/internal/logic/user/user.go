@@ -289,8 +289,8 @@ func (s *sUser) UserProfile(ctx context.Context, req *entity.UserProfileReq) (re
 		Role:          userRecord["role"].String(),
 		AvatarUrl:     userRecord["avatar_url"].String(),
 		WalletBalance: userRecord["wallet_balance"].Float64(),
-		CreatedAt:     userRecord["created_at"].Time().Format("2006-01-02 15:04:05"),
-		UpdatedAt:     userRecord["updated_at"].Time().Format("2006-01-02 15:04:05"),
+		CreatedAt:     time.Time(userRecord["created_at"].Time()).Format("2006-01-02 15:04:05"),
+		UpdatedAt:     time.Time(userRecord["updated_at"].Time()).Format("2006-01-02 15:04:05"),
 	}
 	return
 }
@@ -333,8 +333,8 @@ func (s *sUser) UserById(ctx context.Context, req *entity.UserByIdReq) (res *ent
 		Role:          userRecord["role"].String(),
 		AvatarUrl:     userRecord["avatar_url"].String(),
 		WalletBalance: userRecord["wallet_balance"].Float64(),
-		CreatedAt:     userRecord["created_at"].Time().Format("2006-01-02 15:04:05"),
-		UpdatedAt:     userRecord["updated_at"].Time().Format("2006-01-02 15:04:05"),
+		CreatedAt:     time.Time(userRecord["created_at"].Time()).Format("2006-01-02 15:04:05"),
+		UpdatedAt:     time.Time(userRecord["updated_at"].Time()).Format("2006-01-02 15:04:05"),
 	}
 	return
 }
@@ -489,8 +489,8 @@ func (s *sUser) GetAllUsers(ctx context.Context, req *entity.UserListReq) (res *
 			Role:          u["role"].String(),
 			AvatarUrl:     u["avatar_url"].String(),
 			WalletBalance: u["wallet_balance"].Float64(),
-			CreatedAt:     u["created_at"].Time().Format("2006-01-02 15:04:05"),
-			UpdatedAt:     u["updated_at"].Time().Format("2006-01-02 15:04:05"),
+			CreatedAt:     time.Time(u["created_at"].Time()).Format("2006-01-02 15:04:05"),
+			UpdatedAt:     time.Time(u["updated_at"].Time()).Format("2006-01-02 15:04:05"),
 		})
 	}
 

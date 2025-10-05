@@ -257,15 +257,15 @@ func (s *sParkingOrder) ParkingOrderList(ctx context.Context, req *entity.Parkin
 			LotName:       order.LotName,
 			SlotCode:      order.SlotCode,
 			VehiclePlate:  order.VehiclePlate,
-			StartTime:     order.StartTime.Format("2006-01-02 15:04:05"),
-			EndTime:       order.EndTime.Format("2006-01-02 15:04:05"),
+			StartTime:     time.Time(order.StartTime.Time).Format("2006-01-02 15:04:05"),
+			EndTime:       time.Time(order.EndTime.Time).Format("2006-01-02 15:04:05"),
 			Status:        order.Status,
 			Price:         order.Price,
 			PaymentStatus: order.PaymentStatus,
-			CreatedAt:     order.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:     time.Time(order.CreatedAt.Time).Format("2006-01-02 15:04:05"),
 		}
 		if !order.UpdatedAt.IsZero() {
-			item.UpdatedAt = order.UpdatedAt.Format("2006-01-02 15:04:05")
+			item.UpdatedAt = time.Time(order.UpdatedAt.Time).Format("2006-01-02 15:04:05")
 		}
 		list = append(list, item)
 	}
@@ -327,15 +327,15 @@ func (s *sParkingOrder) ParkingOrderGet(ctx context.Context, req *entity.Parking
 		LotName:       order.LotName,
 		SlotCode:      order.SlotCode,
 		VehiclePlate:  order.VehiclePlate,
-		StartTime:     order.StartTime.Format("2006-01-02 15:04:05"),
-		EndTime:       order.EndTime.Format("2006-01-02 15:04:05"),
+		StartTime:     time.Time(order.StartTime.Time).Format("2006-01-02 15:04:05"),
+		EndTime:       time.Time(order.EndTime.Time).Format("2006-01-02 15:04:05"),
 		Status:        order.Status,
 		Price:         order.Price,
 		PaymentStatus: order.PaymentStatus,
-		CreatedAt:     order.CreatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:     time.Time(order.CreatedAt.Time).Format("2006-01-02 15:04:05"),
 	}
 	if !order.UpdatedAt.IsZero() {
-		item.UpdatedAt = order.UpdatedAt.Format("2006-01-02 15:04:05")
+		item.UpdatedAt = time.Time(order.UpdatedAt.Time).Format("2006-01-02 15:04:05")
 	}
 
 	return &item, nil
@@ -468,15 +468,15 @@ func (s *sParkingOrder) ParkingOrderUpdate(ctx context.Context, req *entity.Park
 		LotName:       updatedOrder.LotName,
 		SlotCode:      updatedOrder.SlotCode,
 		VehiclePlate:  updatedOrder.VehiclePlate,
-		StartTime:     updatedOrder.StartTime.Format("2006-01-02 15:04:05"),
-		EndTime:       updatedOrder.EndTime.Format("2006-01-02 15:04:05"),
+		StartTime:     time.Time(updatedOrder.StartTime.Time).Format("2006-01-02 15:04:05"),
+		EndTime:       time.Time(updatedOrder.EndTime.Time).Format("2006-01-02 15:04:05"),
 		Status:        updatedOrder.Status,
 		Price:         updatedOrder.Price,
 		PaymentStatus: updatedOrder.PaymentStatus,
-		CreatedAt:     updatedOrder.CreatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:     time.Time(updatedOrder.CreatedAt.Time).Format("2006-01-02 15:04:05"),
 	}
 	if !updatedOrder.UpdatedAt.IsZero() {
-		item.UpdatedAt = updatedOrder.UpdatedAt.Format("2006-01-02 15:04:05")
+		item.UpdatedAt = time.Time(updatedOrder.UpdatedAt.Time).Format("2006-01-02 15:04:05")
 	}
 
 	return &item, nil
@@ -590,15 +590,15 @@ func (s *sParkingOrder) ParkingOrderCancel(ctx context.Context, req *entity.Park
 		LotName:       updatedOrder.LotName,
 		SlotCode:      updatedOrder.SlotCode,
 		VehiclePlate:  updatedOrder.VehiclePlate,
-		StartTime:     updatedOrder.StartTime.Format("2006-01-02 15:04:05"),
-		EndTime:       updatedOrder.EndTime.Format("2006-01-02 15:04:05"),
+		StartTime:     time.Time(updatedOrder.StartTime.Time).Format("2006-01-02 15:04:05"),
+		EndTime:       time.Time(updatedOrder.EndTime.Time).Format("2006-01-02 15:04:05"),
 		Status:        updatedOrder.Status,
 		Price:         updatedOrder.Price,
 		PaymentStatus: updatedOrder.PaymentStatus,
-		CreatedAt:     updatedOrder.CreatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:     time.Time(updatedOrder.CreatedAt.Time).Format("2006-01-02 15:04:05"),
 	}
 	if !updatedOrder.UpdatedAt.IsZero() {
-		item.UpdatedAt = updatedOrder.UpdatedAt.Format("2006-01-02 15:04:05")
+		item.UpdatedAt = time.Time(updatedOrder.UpdatedAt.Time).Format("2006-01-02 15:04:05")
 	}
 
 	return &item, nil
@@ -797,15 +797,15 @@ func (s *sParkingOrder) ParkingOrderPayment(ctx context.Context, req *entity.Par
 		LotName:       updatedOrder.LotName,
 		SlotCode:      updatedOrder.SlotCode,
 		VehiclePlate:  updatedOrder.VehiclePlate,
-		StartTime:     updatedOrder.StartTime.Format("2006-01-02 15:04:05"),
-		EndTime:       updatedOrder.EndTime.Format("2006-01-02 15:04:05"),
+		StartTime:     time.Time(updatedOrder.StartTime.Time).Format("2006-01-02 15:04:05"),
+		EndTime:       time.Time(updatedOrder.EndTime.Time).Format("2006-01-02 15:04:05"),
 		Status:        updatedOrder.Status,
 		Price:         updatedOrder.Price,
 		PaymentStatus: updatedOrder.PaymentStatus,
-		CreatedAt:     updatedOrder.CreatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:     time.Time(updatedOrder.CreatedAt.Time).Format("2006-01-02 15:04:05"),
 	}
 	if !updatedOrder.UpdatedAt.IsZero() {
-		item.UpdatedAt = updatedOrder.UpdatedAt.Format("2006-01-02 15:04:05")
+		item.UpdatedAt = time.Time(updatedOrder.UpdatedAt.Time).Format("2006-01-02 15:04:05")
 	}
 
 	return &item, nil

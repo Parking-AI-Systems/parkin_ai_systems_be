@@ -3,6 +3,7 @@ package parking_lot_review
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -195,8 +196,8 @@ func (s *sParkingLotReview) ParkingLotReviewList(ctx context.Context, req *entit
 			Username:  r.Username,
 			Rating:    r.Rating,
 			Comment:   r.Comment,
-			CreatedAt: r.CreatedAt.Format("2006-01-02 15:04:05"),
-			UpdatedAt: r.UpdatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt: time.Time(r.CreatedAt.Time).Format("2006-01-02 15:04:05"),
+			UpdatedAt: time.Time(r.UpdatedAt.Time).Format("2006-01-02 15:04:05"),
 		}
 		list = append(list, item)
 	}
@@ -255,8 +256,8 @@ func (s *sParkingLotReview) ParkingLotReviewGet(ctx context.Context, req *entity
 		Username:  review.Username,
 		Rating:    review.Rating,
 		Comment:   review.Comment,
-		CreatedAt: review.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt: review.UpdatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt: time.Time(review.CreatedAt.Time).Format("2006-01-02 15:04:05"),
+		UpdatedAt: time.Time(review.UpdatedAt.Time).Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil
@@ -385,8 +386,8 @@ func (s *sParkingLotReview) ParkingLotReviewUpdate(ctx context.Context, req *ent
 		Username:  updatedReview.Username,
 		Rating:    updatedReview.Rating,
 		Comment:   updatedReview.Comment,
-		CreatedAt: updatedReview.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt: updatedReview.UpdatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt: time.Time(updatedReview.CreatedAt.Time).Format("2006-01-02 15:04:05"),
+		UpdatedAt: time.Time(updatedReview.UpdatedAt.Time).Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil

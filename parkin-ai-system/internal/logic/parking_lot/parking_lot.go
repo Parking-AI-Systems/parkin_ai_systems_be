@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -192,7 +193,7 @@ func (s *sParkingLot) ParkingLotList(ctx context.Context, req *entity.ParkingLot
 				ParkingLotId: img.LotId,
 				LotName:      lot.Name,
 				ImageUrl:     img.ImageUrl,
-				CreatedAt:    img.CreatedAt.Format("2006-01-02 15:04:05"),
+				CreatedAt:    time.Time(img.CreatedAt.Time).Format("2006-01-02 15:04:05"),
 			}
 			imageItems = append(imageItems, item)
 		}
@@ -213,10 +214,10 @@ func (s *sParkingLot) ParkingLotList(ctx context.Context, req *entity.ParkingLot
 			OpenTime:       lot.OpenTime.Format("15:04:05"),
 			CloseTime:      lot.CloseTime.Format("15:04:05"),
 			Images:         imageItems,
-			CreatedAt:      lot.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:      time.Time(lot.CreatedAt.Time).Format("2006-01-02 15:04:05"),
 		}
 		if !lot.UpdatedAt.IsZero() {
-			item.UpdatedAt = lot.UpdatedAt.Format("2006-01-02 15:04:05")
+			item.UpdatedAt = time.Time(lot.UpdatedAt.Time).Format("2006-01-02 15:04:05")
 		}
 		list = append(list, item)
 	}
@@ -264,7 +265,7 @@ func (s *sParkingLot) ParkingLotGet(ctx context.Context, req *entity.ParkingLotG
 			ParkingLotId: img.LotId,
 			LotName:      lot.Name,
 			ImageUrl:     img.ImageUrl,
-			CreatedAt:    img.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:    time.Time(img.CreatedAt.Time).Format("2006-01-02 15:04:05"),
 		}
 		imageItems = append(imageItems, item)
 	}
@@ -282,13 +283,13 @@ func (s *sParkingLot) ParkingLotGet(ctx context.Context, req *entity.ParkingLotG
 		AvailableSlots: lot.AvailableSlots,
 		PricePerHour:   lot.PricePerHour,
 		Description:    lot.Description,
-		OpenTime:       lot.OpenTime.Format("15:04:05"),
-		CloseTime:      lot.CloseTime.Format("15:04:05"),
+		OpenTime:       time.Time(lot.OpenTime.Time).Format("15:04:05"),
+		CloseTime:      time.Time(lot.CloseTime.Time).Format("15:04:05"),
 		Images:         imageItems,
-		CreatedAt:      lot.CreatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:      time.Time(lot.CreatedAt.Time).Format("2006-01-02 15:04:05"),
 	}
 	if !lot.UpdatedAt.IsZero() {
-		item.UpdatedAt = lot.UpdatedAt.Format("2006-01-02 15:04:05")
+		item.UpdatedAt = time.Time(lot.UpdatedAt.Time).Format("2006-01-02 15:04:05")
 	}
 
 	return &item, nil
@@ -421,7 +422,7 @@ func (s *sParkingLot) ParkingLotUpdate(ctx context.Context, req *entity.ParkingL
 			ParkingLotId: img.LotId,
 			LotName:      updatedLot.Name,
 			ImageUrl:     img.ImageUrl,
-			CreatedAt:    img.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:    time.Time(img.CreatedAt.Time).Format("2006-01-02 15:04:05"),
 		}
 		imageItems = append(imageItems, item)
 	}
@@ -442,10 +443,10 @@ func (s *sParkingLot) ParkingLotUpdate(ctx context.Context, req *entity.ParkingL
 		OpenTime:       updatedLot.OpenTime.Format("15:04:05"),
 		CloseTime:      updatedLot.CloseTime.Format("15:04:05"),
 		Images:         imageItems,
-		CreatedAt:      updatedLot.CreatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:      time.Time(updatedLot.CreatedAt.Time).Format("2006-01-02 15:04:05"),
 	}
 	if !updatedLot.UpdatedAt.IsZero() {
-		item.UpdatedAt = updatedLot.UpdatedAt.Format("2006-01-02 15:04:05")
+		item.UpdatedAt = time.Time(updatedLot.UpdatedAt.Time).Format("2006-01-02 15:04:05")
 	}
 
 	return &item, nil

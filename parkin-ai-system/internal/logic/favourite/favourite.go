@@ -3,6 +3,7 @@ package favourite
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -170,7 +171,7 @@ func (s *sFavorite) FavoriteList(ctx context.Context, req *entity.FavoriteListRe
 			LotId:      f.LotId,
 			LotName:    f.LotName,
 			LotAddress: f.LotAddress,
-			CreatedAt:  f.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:  time.Time(f.CreatedAt.Time).Format("2006-01-02 15:04:05"),
 		}
 		list = append(list, item)
 	}

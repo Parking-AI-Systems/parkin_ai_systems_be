@@ -3,6 +3,7 @@ package notification
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -104,7 +105,7 @@ func (s *sNotification) NotificationList(ctx context.Context, req *entity.Notifi
 			Content:        n.Content,
 			RelatedOrderId: n.RelatedOrderId,
 			IsRead:         n.IsRead,
-			CreatedAt:      n.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:      time.Time(n.CreatedAt.Time).Format("2006-01-02 15:04:05"),
 			RelatedInfo:    getRelatedInfo(n.Type, n.LotName, n.OrderNumber, n.ServiceName),
 		}
 		list = append(list, item)
@@ -180,7 +181,7 @@ func (s *sNotification) NotificationGet(ctx context.Context, req *entity.Notific
 		Content:        notification.Content,
 		RelatedOrderId: notification.RelatedOrderId,
 		IsRead:         notification.IsRead,
-		CreatedAt:      notification.CreatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:      time.Time(notification.CreatedAt.Time).Format("2006-01-02 15:04:05"),
 		RelatedInfo:    getRelatedInfo(notification.Type, notification.LotName, notification.OrderNumber, notification.ServiceName),
 	}
 

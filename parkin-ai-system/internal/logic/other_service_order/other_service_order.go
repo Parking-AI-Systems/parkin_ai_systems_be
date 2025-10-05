@@ -227,12 +227,12 @@ func (s *sOthersServiceOrder) OthersServiceOrderList(ctx context.Context, req *e
 			LotName:       order.LotName,
 			ServiceName:   order.ServiceName,
 			VehiclePlate:  order.VehiclePlate,
-			ScheduledTime: order.ScheduledTime.Format("2006-01-02 15:04:05"),
+			ScheduledTime: time.Time(order.ScheduledTime.Time).Format("2006-01-02 15:04:05"),
 			Status:        order.Status,
 			Price:         order.Price,
 			PaymentStatus: order.PaymentStatus,
-			CreatedAt:     order.CreatedAt.Format("2006-01-02 15:04:05"),
-			UpdatedAt:     order.UpdatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:     time.Time(order.CreatedAt.Time).Format("2006-01-02 15:04:05"),
+			UpdatedAt:     time.Time(order.UpdatedAt.Time).Format("2006-01-02 15:04:05"),
 		}
 		list = append(list, item)
 	}
@@ -294,12 +294,12 @@ func (s *sOthersServiceOrder) OthersServiceOrderGet(ctx context.Context, req *en
 		LotName:       order.LotName,
 		ServiceName:   order.ServiceName,
 		VehiclePlate:  order.VehiclePlate,
-		ScheduledTime: order.ScheduledTime.Format("2006-01-02 15:04:05"),
+		ScheduledTime: time.Time(order.ScheduledTime.Time).Format("2006-01-02 15:04:05"),
 		Status:        order.Status,
 		Price:         order.Price,
 		PaymentStatus: order.PaymentStatus,
-		CreatedAt:     order.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:     order.UpdatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:     time.Time(order.CreatedAt.Time).Format("2006-01-02 15:04:05"),
+		UpdatedAt:     time.Time(order.UpdatedAt.Time).Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil
@@ -414,12 +414,12 @@ func (s *sOthersServiceOrder) OthersServiceOrderUpdate(ctx context.Context, req 
 		LotName:       updatedOrder.LotName,
 		ServiceName:   updatedOrder.ServiceName,
 		VehiclePlate:  updatedOrder.VehiclePlate,
-		ScheduledTime: updatedOrder.ScheduledTime.Format("2006-01-02 15:04:05"),
+		ScheduledTime: time.Time(updatedOrder.ScheduledTime.Time).Format("2006-01-02 15:04:05"),
 		Status:        updatedOrder.Status,
 		Price:         updatedOrder.Price,
 		PaymentStatus: updatedOrder.PaymentStatus,
-		CreatedAt:     updatedOrder.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:     updatedOrder.UpdatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:     time.Time(updatedOrder.CreatedAt.Time).Format("2006-01-02 15:04:05"),
+		UpdatedAt:     time.Time(updatedOrder.UpdatedAt.Time).Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil
@@ -521,12 +521,12 @@ func (s *sOthersServiceOrder) OthersServiceOrderCancel(ctx context.Context, req 
 		LotName:       updatedOrder.LotName,
 		ServiceName:   updatedOrder.ServiceName,
 		VehiclePlate:  updatedOrder.VehiclePlate,
-		ScheduledTime: updatedOrder.ScheduledTime.Format("2006-01-02 15:04:05"),
+		ScheduledTime: time.Time(updatedOrder.ScheduledTime.Time).Format("2006-01-02 15:04:05"),
 		Status:        updatedOrder.Status,
 		Price:         updatedOrder.Price,
 		PaymentStatus: updatedOrder.PaymentStatus,
-		CreatedAt:     updatedOrder.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:     updatedOrder.UpdatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:     time.Time(updatedOrder.CreatedAt.Time).Format("2006-01-02 15:04:05"),
+		UpdatedAt:     time.Time(updatedOrder.UpdatedAt.Time).Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil
@@ -716,12 +716,12 @@ func (s *sOthersServiceOrder) OthersServiceOrderPayment(ctx context.Context, req
 		LotName:       updatedOrder.LotName,
 		ServiceName:   updatedOrder.ServiceName,
 		VehiclePlate:  updatedOrder.VehiclePlate,
-		ScheduledTime: updatedOrder.ScheduledTime.Format("2006-01-02 15:04:05"),
+		ScheduledTime: time.Time(updatedOrder.ScheduledTime.Time).Format("2006-01-02 15:04:05"),
 		Status:        updatedOrder.Status,
 		Price:         updatedOrder.Price,
 		PaymentStatus: updatedOrder.PaymentStatus,
-		CreatedAt:     updatedOrder.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:     updatedOrder.UpdatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:     time.Time(updatedOrder.CreatedAt.Time).Format("2006-01-02 15:04:05"),
+		UpdatedAt:     time.Time(updatedOrder.UpdatedAt.Time).Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil

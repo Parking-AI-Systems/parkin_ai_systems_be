@@ -8,6 +8,7 @@ import (
 	"parkin-ai-system/internal/model/do"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+	"time"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -260,7 +261,7 @@ func (s *sWalletTransaction) WalletTransactionList(ctx context.Context, req *ent
 			RelatedOrderId: t.RelatedOrderId,
 			LicensePlate:   licensePlate,
 			ServiceType:    serviceType,
-			CreatedAt:      t.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:      time.Time(t.CreatedAt.Time).Format("2006-01-02 15:04:05"),
 		}
 		list = append(list, item)
 	}
@@ -339,7 +340,7 @@ func (s *sWalletTransaction) WalletTransactionGet(ctx context.Context, req *enti
 		RelatedOrderId: transaction.RelatedOrderId,
 		LicensePlate:   licensePlate,
 		ServiceType:    serviceType,
-		CreatedAt:      transaction.CreatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:      time.Time(transaction.CreatedAt.Time).Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil

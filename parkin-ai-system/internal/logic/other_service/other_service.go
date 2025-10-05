@@ -8,6 +8,7 @@ import (
 	"parkin-ai-system/internal/model/do"
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
+	"time"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -168,8 +169,8 @@ func (s *sOthersService) OthersServiceList(ctx context.Context, req *entity.Othe
 			Price:           svc.Price,
 			DurationMinutes: svc.DurationMinutes,
 			IsActive:        svc.IsActive,
-			CreatedAt:       svc.CreatedAt.Format("2006-01-02 15:04:05"),
-			UpdatedAt:       svc.UpdatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:       time.Time(svc.CreatedAt.Time).Format("2006-01-02 15:04:05"),
+			UpdatedAt:       time.Time(svc.UpdatedAt.Time).Format("2006-01-02 15:04:05"),
 		}
 		list = append(list, item)
 	}
@@ -221,8 +222,8 @@ func (s *sOthersService) OthersServiceGet(ctx context.Context, req *entity.Other
 		Price:           svc.Price,
 		DurationMinutes: svc.DurationMinutes,
 		IsActive:        svc.IsActive,
-		CreatedAt:       svc.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:       svc.UpdatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:       time.Time(svc.CreatedAt.Time).Format("2006-01-02 15:04:05"),
+		UpdatedAt:       time.Time(svc.UpdatedAt.Time).Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil
@@ -351,8 +352,8 @@ func (s *sOthersService) OthersServiceUpdate(ctx context.Context, req *entity.Ot
 		Price:           updatedSvc.Price,
 		DurationMinutes: updatedSvc.DurationMinutes,
 		IsActive:        updatedSvc.IsActive,
-		CreatedAt:       updatedSvc.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:       updatedSvc.UpdatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:       time.Time(updatedSvc.CreatedAt.Time).Format("2006-01-02 15:04:05"),
+		UpdatedAt:       time.Time(updatedSvc.UpdatedAt.Time).Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil

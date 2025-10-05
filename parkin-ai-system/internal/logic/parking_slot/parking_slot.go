@@ -3,6 +3,7 @@ package parking_slot
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -189,7 +190,7 @@ func (s *sParkingSlot) ParkingSlotList(ctx context.Context, req *entity.ParkingS
 			IsAvailable: s.IsAvailable,
 			SlotType:    s.SlotType,
 			Floor:       s.Floor,
-			CreatedAt:   s.CreatedAt.Format("2006-01-02 15:04:05"),
+			CreatedAt:   time.Time(s.CreatedAt.Time).Format("2006-01-02 15:04:05"),
 		}
 		list = append(list, item)
 	}
@@ -240,7 +241,7 @@ func (s *sParkingSlot) ParkingSlotGet(ctx context.Context, req *entity.ParkingSl
 		IsAvailable: slot.IsAvailable,
 		SlotType:    slot.SlotType,
 		Floor:       slot.Floor,
-		CreatedAt:   slot.CreatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:   time.Time(slot.CreatedAt.Time).Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil
@@ -398,7 +399,7 @@ func (s *sParkingSlot) ParkingSlotUpdate(ctx context.Context, req *entity.Parkin
 		IsAvailable: updatedSlot.IsAvailable,
 		SlotType:    updatedSlot.SlotType,
 		Floor:       updatedSlot.Floor,
-		CreatedAt:   updatedSlot.CreatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:   time.Time(updatedSlot.CreatedAt.Time).Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil

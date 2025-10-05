@@ -9,6 +9,7 @@ import (
 	"parkin-ai-system/internal/model/entity"
 	"parkin-ai-system/internal/service"
 	"regexp"
+	"time"
 
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
@@ -198,7 +199,7 @@ func (s *sVehicle) VehicleList(ctx context.Context, req *entity.VehicleListReq) 
 			Model:        record["model"].String(),
 			Color:        record["color"].String(),
 			Type:         record["type"].String(),
-			CreatedAt:    record["created_at"].Time().Format("2006-01-02 15:04:05"),
+			CreatedAt:    time.Time(record["created_at"].Time()).Format("2006-01-02 15:04:05"),
 		}
 
 		list = append(list, item)
@@ -256,7 +257,7 @@ func (s *sVehicle) VehicleGet(ctx context.Context, req *entity.VehicleGetReq) (*
 		Model:        vehicle.Model,
 		Color:        vehicle.Color,
 		Type:         vehicle.Type,
-		CreatedAt:    vehicle.CreatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:    time.Time(vehicle.CreatedAt.Time).Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil
@@ -413,8 +414,8 @@ func (s *sVehicle) VehicleUpdate(ctx context.Context, req *entity.VehicleUpdateR
 		Model:        updatedVehicle.Model,
 		Color:        updatedVehicle.Color,
 		Type:         updatedVehicle.Type,
-		CreatedAt:    updatedVehicle.CreatedAt.Format("2006-01-02 15:04:05"),
-		UpdatedAt:    updatedVehicle.UpdatedAt.Format("2006-01-02 15:04:05"),
+		CreatedAt:    time.Time(updatedVehicle.CreatedAt.Time).Format("2006-01-02 15:04:05"),
+		UpdatedAt:    time.Time(updatedVehicle.UpdatedAt.Time).Format("2006-01-02 15:04:05"),
 	}
 
 	return &item, nil
