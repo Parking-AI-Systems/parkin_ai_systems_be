@@ -32,7 +32,7 @@ database:
     level: "all"
     stdout: true
   default:
-    link: "pgsql:neondb_owner:npg_BNZpL67rcRiw@tcp(ep-bitter-dust-a1n27idx-pooler.ap-southeast-1.aws.neon.tech:5432)/neondb?sslmode=require&channelBinding=require"
+    link: "pgsql:neondb_owner:npg_hL71PISXpYOR@tcp(ep-dawn-night-a4gf4p3h-pooler.us-east-1.aws.neon.tech:5432)/neondb?sslmode=require&channelBinding=require"
     debug: true
     maxIdle: "5"
     maxOpen: "10" 
