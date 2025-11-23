@@ -138,7 +138,7 @@ func (s *sPayment) CheckoutAdd(ctx context.Context, reqInterface interface{}) (i
 		bankID,
 		accountNo,
 		template,
-		payosReq.Amount/100, // VietQR sử dụng VND, không phải xu
+		payosReq.Amount, // VietQR uses VND
 		url.QueryEscape(fmt.Sprintf("Thanh toan don hang #%d", payosReq.OrderCode)))
 
 	g.Log().Info(ctx, "PayOS payment link created",
@@ -228,7 +228,7 @@ func (s *sPayment) CreatePaymentLink(ctx context.Context, orderType string, orde
 
 		orderMap := parkingOrder.Map()
 		orderCode = gconv.Int64(orderMap["id"])
-		amount = int(gconv.Float64(orderMap["price"]) * 100) // Chuyển sang xu (VND)
+		amount = int(gconv.Float64(orderMap["price"])) // VND is already the smallest unit
 		description = fmt.Sprintf("Thanh toán chỗ đậu xe %s - %s",
 			gconv.String(orderMap["lot_name"]),
 			gconv.String(orderMap["slot_code"]))
@@ -265,8 +265,8 @@ func (s *sPayment) CreatePaymentLink(ctx context.Context, orderType string, orde
 		}
 
 		orderMap := serviceOrder.Map()
-		orderCode = gconv.Int64(orderMap["id"]) + 1000000    // Thêm prefix để phân biệt với parking order
-		amount = int(gconv.Float64(orderMap["price"]) * 100) // Chuyển sang xu (VND)
+		orderCode = gconv.Int64(orderMap["id"]) + 1000000 // Thêm prefix để phân biệt với parking order
+		amount = int(gconv.Float64(orderMap["price"]))    // VND is already the smallest unit
 		description = fmt.Sprintf("Thanh toán dịch vụ %s tại %s",
 			gconv.String(orderMap["service_name"]),
 			gconv.String(orderMap["lot_name"]))
@@ -355,7 +355,7 @@ func (s *sPayment) CreatePaymentLink(ctx context.Context, orderType string, orde
 		bankID,
 		accountNo,
 		template,
-		amount/100, // VietQR sử dụng VND, không phải xu
+		amount, // VietQR uses VND
 		url.QueryEscape(fmt.Sprintf("Thanh toan %s #%d", orderType, orderCode)))
 
 	g.Log().Info(ctx, "PayOS payment link created",
@@ -471,7 +471,7 @@ func (s *sPayment) updateParkingOrderPayment(ctx context.Context, tx gdb.TX, ord
 	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(g.Map{
 		"user_id":          g.Map{"SELECT user_id FROM parking_orders WHERE id = ?": orderID},
 		"type":             "payment_completed",
-		"content":          fmt.Sprintf("Thanh toán đơn hàng đậu xe #%d đã hoàn thành thành công. Số tiền: %d VND", orderID, data.Amount/100),
+		"content":          fmt.Sprintf("Thanh toán đơn hàng đậu xe #%d đã hoàn thành thành công. Số tiền: %d VND", orderID, data.Amount),
 		"related_order_id": orderID,
 		"is_read":          false,
 		"created_at":       time.Now(),
@@ -504,7 +504,7 @@ func (s *sPayment) updateServiceOrderPayment(ctx context.Context, tx gdb.TX, ord
 	_, err = dao.Notifications.Ctx(ctx).TX(tx).Data(g.Map{
 		"user_id":          g.Map{"SELECT user_id FROM others_service_orders WHERE id = ?": orderID},
 		"type":             "payment_completed",
-		"content":          fmt.Sprintf("Thanh toán đơn hàng dịch vụ #%d đã hoàn thành thành công. Số tiền: %d VND", orderID, data.Amount/100),
+		"content":          fmt.Sprintf("Thanh toán đơn hàng dịch vụ #%d đã hoàn thành thành công. Số tiền: %d VND", orderID, data.Amount),
 		"related_order_id": orderID,
 		"is_read":          false,
 		"created_at":       time.Now(),
