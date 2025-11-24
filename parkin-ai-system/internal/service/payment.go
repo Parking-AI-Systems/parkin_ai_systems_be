@@ -16,6 +16,7 @@ type (
 		CheckoutAdd(ctx context.Context, req interface{}) (interface{}, error)
 		PaymentLinkGet(ctx context.Context, paymentLinkId string) (interface{}, error)
 		RefundAdd(ctx context.Context, paymentLinkId string, amount int, reason *string) (interface{}, error)
+		PaymentStatisticsGet(ctx context.Context, page int, pageSize int) (interface{}, error)
 	}
 )
 

@@ -11,6 +11,7 @@ import (
 	"github.com/gogf/gf/v2/database/gdb"
 	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
+	"github.com/gogf/gf/v2/os/gtime"
 	"github.com/gogf/gf/v2/util/gconv"
 	"github.com/payOSHQ/payos-lib-golang"
 
@@ -515,4 +516,190 @@ func (s *sPayment) updateServiceOrderPayment(ctx context.Context, tx gdb.TX, ord
 	}
 
 	return nil
+}
+
+// PaymentStatisticsGet fetches payment statistics from local database
+func (s *sPayment) PaymentStatisticsGet(ctx context.Context, page int, pageSize int) (interface{}, error) {
+	g.Log().Info(ctx, "Fetching payment statistics from local database",
+		"page", page,
+		"pageSize", pageSize)
+
+	// Calculate offset
+	offset := page * pageSize
+
+	// Query parking orders with all needed fields
+	var parkingOrdersRaw []struct {
+		Id            int64       `json:"id"`
+		UserId        int64       `json:"user_id"`
+		Price         float64     `json:"price"`
+		PaymentStatus string      `json:"payment_status"`
+		Status        string      `json:"status"`
+		CreatedAt     *gtime.Time `json:"created_at"`
+		UpdatedAt     *gtime.Time `json:"updated_at"`
+	}
+
+	// Get parking orders
+	err := dao.ParkingOrders.Ctx(ctx).
+		Fields("id, user_id, price, payment_status, status, created_at, updated_at").
+		Where("deleted_at IS NULL").
+		OrderDesc("created_at").
+		Limit(offset, pageSize).
+		Scan(&parkingOrdersRaw)
+
+	if err != nil {
+		return nil, gerror.Wrap(err, "failed to query parking orders")
+	}
+
+	// Get service orders with all needed fields
+	var serviceOrdersRaw []struct {
+		Id            int64       `json:"id"`
+		UserId        int64       `json:"user_id"`
+		Price         float64     `json:"price"`
+		PaymentStatus string      `json:"payment_status"`
+		Status        string      `json:"status"`
+		CreatedAt     *gtime.Time `json:"created_at"`
+		UpdatedAt     *gtime.Time `json:"updated_at"`
+	}
+
+	err = dao.OthersServiceOrders.Ctx(ctx).
+		Fields("id, user_id, price, payment_status, status, created_at, updated_at").
+		Where("deleted_at IS NULL").
+		OrderDesc("created_at").
+		Limit(offset, pageSize).
+		Scan(&serviceOrdersRaw)
+
+	if err != nil {
+		return nil, gerror.Wrap(err, "failed to query service orders")
+	}
+
+	// Get user info for account details
+	cfg := config.GetConfig()
+
+	// Map parking orders to PayOS-like format
+	parkingOrders := make([]map[string]interface{}, 0, len(parkingOrdersRaw))
+	for _, order := range parkingOrdersRaw {
+		// Get user info
+		var userName string
+		dao.Users.Ctx(ctx).
+			Fields("full_name").
+			Where("id", order.UserId).
+			Where("deleted_at IS NULL").
+			Scan(&userName)
+
+		orderItem := map[string]interface{}{
+			"id":                 order.Id,
+			"uuid":               fmt.Sprintf("parking-%d", order.Id),
+			"orderCode":          order.Id,
+			"amount":             fmt.Sprintf("%.0f", order.Price),
+			"amountPaid":         nil,
+			"amountRemaining":    fmt.Sprintf("%.0f", order.Price),
+			"description":        fmt.Sprintf("Parking Order #%d", order.Id),
+			"accountName":        cfg.PayOs.ClientID,
+			"accountNumber":      "4070200704999",
+			"status":             order.PaymentStatus,
+			"items":              []interface{}{},
+			"cancelUrl":          "",
+			"returnUrl":          "",
+			"buyerName":          userName,
+			"buyerEmail":         nil,
+			"buyerPhone":         nil,
+			"signature":          "",
+			"cancelledAt":        nil,
+			"cancellationReason": nil,
+			"paidAt":             nil,
+			"createdAt":          order.CreatedAt.Format("2006-01-02T15:04:05.000Z07:00"),
+			"updatedAt":          order.UpdatedAt.Format("2006-01-02T15:04:05.000Z07:00"),
+		}
+
+		// If payment is completed, set amountPaid and paidAt
+		if order.PaymentStatus == "completed" {
+			amountPaid := fmt.Sprintf("%.0f", order.Price)
+			orderItem["amountPaid"] = &amountPaid
+			orderItem["amountRemaining"] = "0"
+			paidAt := order.UpdatedAt.Format("2006-01-02T15:04:05.000Z07:00")
+			orderItem["paidAt"] = &paidAt
+		}
+
+		parkingOrders = append(parkingOrders, orderItem)
+	}
+
+	// Map service orders to PayOS-like format
+	serviceOrders := make([]map[string]interface{}, 0, len(serviceOrdersRaw))
+	for _, order := range serviceOrdersRaw {
+		// Get user info
+		var userName string
+		dao.Users.Ctx(ctx).
+			Fields("full_name").
+			Where("id", order.UserId).
+			Where("deleted_at IS NULL").
+			Scan(&userName)
+
+		orderItem := map[string]interface{}{
+			"id":                 order.Id,
+			"uuid":               fmt.Sprintf("service-%d", order.Id),
+			"orderCode":          order.Id,
+			"amount":             fmt.Sprintf("%.0f", order.Price),
+			"amountPaid":         nil,
+			"amountRemaining":    fmt.Sprintf("%.0f", order.Price),
+			"description":        fmt.Sprintf("Service Order #%d", order.Id),
+			"accountName":        cfg.PayOs.ClientID,
+			"accountNumber":      "4070200704999",
+			"status":             order.PaymentStatus,
+			"items":              []interface{}{},
+			"cancelUrl":          "",
+			"returnUrl":          "",
+			"buyerName":          userName,
+			"buyerEmail":         nil,
+			"buyerPhone":         nil,
+			"signature":          "",
+			"cancelledAt":        nil,
+			"cancellationReason": nil,
+			"paidAt":             nil,
+			"createdAt":          order.CreatedAt.Format("2006-01-02T15:04:05.000Z07:00"),
+			"updatedAt":          order.UpdatedAt.Format("2006-01-02T15:04:05.000Z07:00"),
+		}
+
+		// If payment is completed, set amountPaid and paidAt
+		if order.PaymentStatus == "completed" {
+			amountPaid := fmt.Sprintf("%.0f", order.Price)
+			orderItem["amountPaid"] = &amountPaid
+			orderItem["amountRemaining"] = "0"
+			paidAt := order.UpdatedAt.Format("2006-01-02T15:04:05.000Z07:00")
+			orderItem["paidAt"] = &paidAt
+		}
+
+		serviceOrders = append(serviceOrders, orderItem)
+	}
+
+	// Merge and sort all orders by createdAt
+	allOrders := make([]map[string]interface{}, 0, len(parkingOrders)+len(serviceOrders))
+	allOrders = append(allOrders, parkingOrders...)
+	allOrders = append(allOrders, serviceOrders...)
+
+	// Get total count
+	parkingTotal, _ := dao.ParkingOrders.Ctx(ctx).
+		Where("deleted_at IS NULL").
+		Count()
+
+	serviceTotal, _ := dao.OthersServiceOrders.Ctx(ctx).
+		Where("deleted_at IS NULL").
+		Count()
+
+	totalRows := parkingTotal + serviceTotal
+
+	// Build PayOS-like response structure
+	result := map[string]interface{}{
+		"code": "00",
+		"desc": "success",
+		"data": map[string]interface{}{
+			"orders":    allOrders,
+			"totalRows": totalRows,
+		},
+	}
+
+	g.Log().Info(ctx, "Payment statistics retrieved successfully",
+		"totalOrders", len(allOrders),
+		"totalRows", totalRows)
+
+	return result, nil
 }

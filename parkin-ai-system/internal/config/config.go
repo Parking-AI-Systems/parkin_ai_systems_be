@@ -60,11 +60,12 @@ type AuthConfig struct {
 }
 
 type PayOsConfig struct {
-	ClientID     string `yaml:"clientID"`
-	ApiKey       string `yaml:"apiKey"`
-	CheckSum     string `yaml:"checkSum"`
-	ParkinDomain string `yaml:"parkinDomain"`
-	PayOsDomain  string `yaml:"payOsDomain"`
+	ClientID       string `yaml:"clientID"`
+	ApiKey         string `yaml:"apiKey"`
+	CheckSum       string `yaml:"checkSum"`
+	ParkinDomain   string `yaml:"parkinDomain"`
+	PayOsDomain    string `yaml:"payOsDomain"`
+	OrganizationID string `yaml:"organizationID"`
 	// VietQR configuration
 	VietQR VietQRConfig `yaml:"vietqr"`
 }

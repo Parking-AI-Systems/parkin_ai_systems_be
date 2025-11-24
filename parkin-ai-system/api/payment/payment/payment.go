@@ -137,3 +137,56 @@ type CreatePaymentLinkRes struct {
 	Amount        int    `json:"amount"`        // Payment amount in VND
 	OrderCode     int64  `json:"orderCode"`     // Order code used in PayOS
 }
+
+// PaymentStatisticsGetReq for fetching payment statistics from PayOS
+type PaymentStatisticsGetReq struct {
+	g.Meta   `path:"/payment-statistics" tags:"Payment" method:"GET" summary:"Get payment statistics" description:"Fetches payment statistics from local database"`
+	Page     int `json:"page" v:"min:0#Page must be non-negative" d:"0"`
+	PageSize int `json:"pageSize" v:"min:1|max:100#Page size must be between 1 and 100" d:"50"`
+}
+
+// PaymentStatisticsGetRes for payment statistics response
+type PaymentStatisticsGetRes struct {
+	Code string                 `json:"code"` // Response code
+	Desc string                 `json:"desc"` // Response description
+	Data map[string]interface{} `json:"data"` // Statistics data (flexible structure)
+}
+
+// PaymentStatisticsData contains the payment orders and total count
+type PaymentStatisticsData struct {
+	Orders    []PaymentOrderItem `json:"orders"`    // List of payment orders
+	TotalRows int                `json:"totalRows"` // Total number of orders
+}
+
+// PaymentOrderItem represents a single payment order from PayOS
+type PaymentOrderItem struct {
+	ID                 int64         `json:"id"`
+	UUID               string        `json:"uuid"`
+	OrderCode          int64         `json:"orderCode"`
+	Amount             string        `json:"amount"`
+	AmountPaid         *string       `json:"amountPaid"`
+	AmountRemaining    string        `json:"amountRemaining"`
+	Description        string        `json:"description"`
+	AccountName        string        `json:"accountName"`
+	AccountNumber      string        `json:"accountNumber"`
+	Status             string        `json:"status"` // PENDING, PAID, CANCELLED
+	Items              []PaymentItem `json:"items"`
+	CancelUrl          string        `json:"cancelUrl"`
+	ReturnUrl          string        `json:"returnUrl"`
+	BuyerName          *string       `json:"buyerName"`
+	BuyerEmail         *string       `json:"buyerEmail"`
+	BuyerPhone         *string       `json:"buyerPhone"`
+	Signature          string        `json:"signature"`
+	CancelledAt        *string       `json:"cancelledAt"`
+	CancellationReason *string       `json:"cancellationReason"`
+	PaidAt             *string       `json:"paidAt"`
+	CreatedAt          string        `json:"createdAt"`
+	UpdatedAt          string        `json:"updatedAt"`
+}
+
+// PaymentItem represents an item in a payment order
+type PaymentItem struct {
+	Name     string `json:"name"`
+	Quantity int    `json:"quantity"`
+	Price    int    `json:"price"`
+}

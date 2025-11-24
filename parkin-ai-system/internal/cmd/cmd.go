@@ -118,14 +118,14 @@ var (
 				// Public endpoints
 				group.Middleware(LogActionMiddleware("user_register"))
 				group.Bind(userCtrl.UserRegister)
-
 				group.Middleware(LogActionMiddleware("user_login"))
 				group.Bind(userCtrl.UserLogin)
 
 				group.Middleware(LogActionMiddleware("user_refresh"))
 				group.Bind(userCtrl.UserRefreshToken)
 
-				// Public parking lot get
+				group.Middleware(LogActionMiddleware("payment_link_statistics_get"))
+				group.Bind(paymentCtrl.PaymentStatisticsGet) // Public parking lot get
 				group.Bind(parkingLotCtrl.ParkingLotGet)
 
 				group.Group("/", func(authGroup *ghttp.RouterGroup) {
